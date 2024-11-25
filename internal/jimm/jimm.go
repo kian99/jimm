@@ -46,6 +46,9 @@ var (
 // connections therefore the JIMM object itself does not contain any per-
 // request state.
 type JIMM struct {
+	// RoleManager provides a means to manage roles within JIMM.
+	RoleManager
+
 	// Database is the database used by JIMM, this provides direct access
 	// to the data store. Any client accessing the database directly is
 	// responsible for ensuring that the authenticated user has access to
@@ -87,9 +90,6 @@ type JIMM struct {
 	// OAuthAuthenticator is responsible for handling authentication
 	// via OAuth2.0 AND JWT access tokens to JIMM.
 	OAuthAuthenticator OAuthAuthenticator
-
-	// RoleManager provides a means to manage roles within JIMM.
-	RoleManager RoleManager
 }
 
 // RoleManager provides a means to manage roles within JIMM.
@@ -116,19 +116,9 @@ func (j *JIMM) ResourceTag() names.ControllerTag {
 	return names.NewControllerTag(j.UUID)
 }
 
-// DB returns the database used by JIMM.
-func (j *JIMM) DB() *db.Database {
-	return &j.Database
-}
-
 // PubsubHub returns the pub-sub hub used for buffering model summaries.
 func (j *JIMM) PubSubHub() *pubsub.Hub {
 	return j.Pubsub
-}
-
-// AuthorizationClient return the OpenFGA client used by JIMM.
-func (j *JIMM) AuthorizationClient() *openfga.OFGAClient {
-	return j.OpenFGAClient
 }
 
 // OAuthAuthenticator is responsible for handling authentication
