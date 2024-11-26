@@ -15,9 +15,9 @@ import (
 
 	"github.com/canonical/jimm/v3/internal/common/pagination"
 	"github.com/canonical/jimm/v3/internal/dbmodel"
+	"github.com/canonical/jimm/v3/internal/jimm"
 	"github.com/canonical/jimm/v3/internal/jimmhttp/rebac_admin"
 	"github.com/canonical/jimm/v3/internal/openfga"
-	"github.com/canonical/jimm/v3/internal/testutils/jimmtest"
 	"github.com/canonical/jimm/v3/internal/testutils/jimmtest/mocks"
 	"github.com/canonical/jimm/v3/pkg/api/params"
 )
@@ -25,12 +25,13 @@ import (
 func TestCreateGroup(t *testing.T) {
 	c := qt.New(t)
 	var addErr error
-	jimm := jimmtest.JIMM{
-		GroupService: mocks.GroupService{
-			AddGroup_: func(ctx context.Context, user *openfga.User, name string) (*dbmodel.GroupEntry, error) {
-				return &dbmodel.GroupEntry{UUID: "test-uuid", Name: name}, addErr
-			},
+	groupService := mocks.GroupService{
+		AddGroup_: func(ctx context.Context, user *openfga.User, name string) (*dbmodel.GroupEntry, error) {
+			return &dbmodel.GroupEntry{UUID: "test-uuid", Name: name}, addErr
 		},
+	}
+	jimm := jimm.JIMM{
+		GroupManager: &groupService,
 	}
 	user := openfga.User{}
 	ctx := context.Background()
@@ -49,18 +50,19 @@ func TestUpdateGroup(t *testing.T) {
 	c := qt.New(t)
 	groupID := "group-id"
 	var renameErr error
-	jimm := jimmtest.JIMM{
-		GroupService: mocks.GroupService{
-			GetGroupByUUID_: func(ctx context.Context, user *openfga.User, uuid string) (*dbmodel.GroupEntry, error) {
-				return &dbmodel.GroupEntry{UUID: groupID, Name: "test-group"}, nil
-			},
-			RenameGroup_: func(ctx context.Context, user *openfga.User, oldName, newName string) error {
-				if oldName != "test-group" {
-					return errors.New("invalid old group name")
-				}
-				return renameErr
-			},
+	groupService := mocks.GroupService{
+		GetGroupByUUID_: func(ctx context.Context, user *openfga.User, uuid string) (*dbmodel.GroupEntry, error) {
+			return &dbmodel.GroupEntry{UUID: groupID, Name: "test-group"}, nil
 		},
+		RenameGroup_: func(ctx context.Context, user *openfga.User, oldName, newName string) error {
+			if oldName != "test-group" {
+				return errors.New("invalid old group name")
+			}
+			return renameErr
+		},
+	}
+	jimm := jimm.JIMM{
+		GroupManager: &groupService,
 	}
 	user := openfga.User{}
 	ctx := context.Background()
@@ -84,16 +86,18 @@ func TestListGroups(t *testing.T) {
 		{Name: "group-2"},
 		{Name: "group-3"},
 	}
-	jimm := jimmtest.JIMM{
-		GroupService: mocks.GroupService{
-			ListGroups_: func(ctx context.Context, user *openfga.User, pagination pagination.LimitOffsetPagination, match string) ([]dbmodel.GroupEntry, error) {
-				return returnedGroups, listErr
-			},
-			CountGroups_: func(ctx context.Context, user *openfga.User) (int, error) {
-				return 10, nil
-			},
+	groupService := mocks.GroupService{
+		ListGroups_: func(ctx context.Context, user *openfga.User, pagination pagination.LimitOffsetPagination, match string) ([]dbmodel.GroupEntry, error) {
+			return returnedGroups, listErr
+		},
+		CountGroups_: func(ctx context.Context, user *openfga.User) (int, error) {
+			return 10, nil
 		},
 	}
+	jimm := jimm.JIMM{
+		GroupManager: &groupService,
+	}
+
 	expected := []resources.Group{}
 	id := ""
 	for _, group := range returnedGroups {
@@ -118,18 +122,19 @@ func TestListGroups(t *testing.T) {
 func TestDeleteGroup(t *testing.T) {
 	c := qt.New(t)
 	var deleteErr error
-	jimm := jimmtest.JIMM{
-		GroupService: mocks.GroupService{
-			GetGroupByUUID_: func(ctx context.Context, user *openfga.User, uuid string) (*dbmodel.GroupEntry, error) {
-				return &dbmodel.GroupEntry{UUID: uuid, Name: "test-group"}, nil
-			},
-			RemoveGroup_: func(ctx context.Context, user *openfga.User, name string) error {
-				if name != "test-group" {
-					return errors.New("invalid name provided")
-				}
-				return deleteErr
-			},
+	groupService := mocks.GroupService{
+		GetGroupByUUID_: func(ctx context.Context, user *openfga.User, uuid string) (*dbmodel.GroupEntry, error) {
+			return &dbmodel.GroupEntry{UUID: uuid, Name: "test-group"}, nil
 		},
+		RemoveGroup_: func(ctx context.Context, user *openfga.User, name string) error {
+			if name != "test-group" {
+				return errors.New("invalid name provided")
+			}
+			return deleteErr
+		},
+	}
+	jimm := jimm.JIMM{
+		GroupManager: &groupService,
 	}
 	user := openfga.User{}
 	ctx := context.Background()
@@ -153,17 +158,19 @@ func TestGetGroupIdentities(t *testing.T) {
 		Relation: ofga.Relation("member"),
 		Target:   &ofga.Entity{Kind: "group", ID: "my-group"},
 	}
-	jimm := jimmtest.JIMM{
-		GroupService: mocks.GroupService{
-			GetGroupByUUID_: func(ctx context.Context, user *openfga.User, uuid string) (*dbmodel.GroupEntry, error) {
-				return nil, getGroupErr
-			},
+	groupService := mocks.GroupService{
+		GetGroupByUUID_: func(ctx context.Context, user *openfga.User, uuid string) (*dbmodel.GroupEntry, error) {
+			return nil, getGroupErr
 		},
-		RelationService: mocks.RelationService{
-			ListRelationshipTuples_: func(ctx context.Context, user *openfga.User, tuple params.RelationshipTuple, pageSize int32, ct string) ([]openfga.Tuple, string, error) {
-				return []openfga.Tuple{testTuple}, continuationToken, listTuplesErr
-			},
+	}
+	permissionService := mocks.PermissionService{
+		ListRelationshipTuples_: func(ctx context.Context, user *openfga.User, tuple params.RelationshipTuple, pageSize int32, ct string) ([]openfga.Tuple, string, error) {
+			return []openfga.Tuple{testTuple}, continuationToken, listTuplesErr
 		},
+	}
+	jimm := jimm.JIMM{
+		GroupManager:      &groupService,
+		PermissionManager: &permissionService,
 	}
 	user := openfga.User{}
 	ctx := context.Background()
@@ -200,15 +207,16 @@ func TestGetGroupIdentities(t *testing.T) {
 func TestPatchGroupIdentities(t *testing.T) {
 	c := qt.New(t)
 	var patchTuplesErr error
-	jimm := jimmtest.JIMM{
-		RelationService: mocks.RelationService{
-			AddRelation_: func(ctx context.Context, user *openfga.User, tuples []params.RelationshipTuple) error {
-				return patchTuplesErr
-			},
-			RemoveRelation_: func(ctx context.Context, user *openfga.User, tuples []params.RelationshipTuple) error {
-				return patchTuplesErr
-			},
+	permissionService := mocks.PermissionService{
+		AddRelation_: func(ctx context.Context, user *openfga.User, tuples []params.RelationshipTuple) error {
+			return patchTuplesErr
 		},
+		RemoveRelation_: func(ctx context.Context, user *openfga.User, tuples []params.RelationshipTuple) error {
+			return patchTuplesErr
+		},
+	}
+	jimm := jimm.JIMM{
+		PermissionManager: &permissionService,
 	}
 	user := openfga.User{}
 	ctx := context.Background()
@@ -247,12 +255,13 @@ func TestGetGroupEntitlements(t *testing.T) {
 		Relation: ofga.Relation("member"),
 		Target:   &ofga.Entity{Kind: "group", ID: "my-group"},
 	}
-	jimm := jimmtest.JIMM{
-		RelationService: mocks.RelationService{
-			ListObjectRelations_: func(ctx context.Context, user *openfga.User, object string, pageSize int32, ct pagination.EntitlementToken) ([]openfga.Tuple, pagination.EntitlementToken, error) {
-				return []openfga.Tuple{testTuple}, pagination.NewEntitlementToken(continuationToken), listRelationsErr
-			},
+	permissionService := mocks.PermissionService{
+		ListObjectRelations_: func(ctx context.Context, user *openfga.User, object string, pageSize int32, ct pagination.EntitlementToken) ([]openfga.Tuple, pagination.EntitlementToken, error) {
+			return []openfga.Tuple{testTuple}, pagination.NewEntitlementToken(continuationToken), listRelationsErr
 		},
+	}
+	jimm := jimm.JIMM{
+		PermissionManager: &permissionService,
 	}
 	user := openfga.User{}
 	ctx := context.Background()
@@ -288,15 +297,16 @@ func TestGetGroupEntitlements(t *testing.T) {
 func TestPatchGroupEntitlements(t *testing.T) {
 	c := qt.New(t)
 	var patchTuplesErr error
-	jimm := jimmtest.JIMM{
-		RelationService: mocks.RelationService{
-			AddRelation_: func(ctx context.Context, user *openfga.User, tuples []params.RelationshipTuple) error {
-				return patchTuplesErr
-			},
-			RemoveRelation_: func(ctx context.Context, user *openfga.User, tuples []params.RelationshipTuple) error {
-				return patchTuplesErr
-			},
+	permissionService := mocks.PermissionService{
+		AddRelation_: func(ctx context.Context, user *openfga.User, tuples []params.RelationshipTuple) error {
+			return patchTuplesErr
 		},
+		RemoveRelation_: func(ctx context.Context, user *openfga.User, tuples []params.RelationshipTuple) error {
+			return patchTuplesErr
+		},
+	}
+	jimm := jimm.JIMM{
+		PermissionManager: &permissionService,
 	}
 	user := openfga.User{}
 	ctx := context.Background()

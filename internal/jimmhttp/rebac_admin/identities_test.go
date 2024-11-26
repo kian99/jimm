@@ -157,7 +157,7 @@ func TestGetIdentityGroups(t *testing.T) {
 			}
 			return nil, dbmodel.IdentityCreationError
 		},
-		RelationService: mocks.RelationService{
+		PermissionService: mocks.PermissionService{
 			ListRelationshipTuples_: func(ctx context.Context, user *openfga.User, tuple params.RelationshipTuple, pageSize int32, continuationToken string) ([]openfga.Tuple, string, error) {
 				return []openfga.Tuple{testTuple}, "continuation-token", listTuplesErr
 			},
@@ -200,7 +200,7 @@ func TestPatchIdentityGroups(t *testing.T) {
 			}
 			return nil, dbmodel.IdentityCreationError
 		},
-		RelationService: mocks.RelationService{
+		PermissionService: mocks.PermissionService{
 			AddRelation_: func(ctx context.Context, user *openfga.User, tuples []params.RelationshipTuple) error {
 				return patchTuplesErr
 			},

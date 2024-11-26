@@ -14,8 +14,8 @@ import (
 
 	"github.com/canonical/jimm/v3/internal/common/pagination"
 	"github.com/canonical/jimm/v3/internal/errors"
+	"github.com/canonical/jimm/v3/internal/jimm"
 	"github.com/canonical/jimm/v3/internal/jimmhttp/rebac_admin/utils"
-	"github.com/canonical/jimm/v3/internal/jujuapi"
 	"github.com/canonical/jimm/v3/internal/openfga"
 	ofganames "github.com/canonical/jimm/v3/internal/openfga/names"
 	apiparams "github.com/canonical/jimm/v3/pkg/api/params"
@@ -23,10 +23,10 @@ import (
 )
 
 type identitiesService struct {
-	jimm jujuapi.JIMM
+	jimm *jimm.JIMM
 }
 
-func newidentitiesService(jimm jujuapi.JIMM) *identitiesService {
+func newidentitiesService(jimm *jimm.JIMM) *identitiesService {
 	return &identitiesService{
 		jimm: jimm,
 	}
@@ -119,7 +119,7 @@ func (s *identitiesService) GetIdentityGroups(ctx context.Context, identityId st
 		return nil, v1.NewNotFoundError(fmt.Sprintf("User with id %s not found", identityId))
 	}
 	filter := utils.CreateTokenPaginationFilter(params.Size, params.NextToken, params.NextPageToken)
-	tuples, cNextToken, err := s.jimm.ListRelationshipTuples(ctx, user, apiparams.RelationshipTuple{
+	tuples, cNextToken, err := s.jimm.PermissionManager.ListRelationshipTuples(ctx, user, apiparams.RelationshipTuple{
 		Object:       objUser.ResourceTag().String(),
 		Relation:     ofganames.MemberRelation.String(),
 		TargetObject: openfga.GroupType.String(),
@@ -130,7 +130,7 @@ func (s *identitiesService) GetIdentityGroups(ctx context.Context, identityId st
 
 	groups := make([]resources.Group, 0, len(tuples))
 	for _, t := range tuples {
-		dbGroup, err := s.jimm.GetGroupByUUID(ctx, user, t.Target.ID)
+		dbGroup, err := s.jimm.GroupManager.GetGroupByUUID(ctx, user, t.Target.ID)
 		if err != nil {
 			// Handle the case where the group was removed from the DB but a lingering OpenFGA tuple still exists.
 			// Don't return an error as that would prevent a user from viewing their groups, instead drop the group from the result.
@@ -187,14 +187,14 @@ func (s *identitiesService) PatchIdentityGroups(ctx context.Context, identityId 
 		}
 	}
 	if len(additions) > 0 {
-		err = s.jimm.AddRelation(ctx, user, additions)
+		err = s.jimm.PermissionManager.AddRelation(ctx, user, additions)
 		if err != nil {
 			zapctx.Error(context.Background(), "cannot add relations", zap.Error(err))
 			return false, v1.NewUnknownError(err.Error())
 		}
 	}
 	if len(deletions) > 0 {
-		err = s.jimm.RemoveRelation(ctx, user, deletions)
+		err = s.jimm.PermissionManager.RemoveRelation(ctx, user, deletions)
 		if err != nil {
 			zapctx.Error(context.Background(), "cannot remove relations", zap.Error(err))
 			return false, v1.NewUnknownError(err.Error())
@@ -219,7 +219,7 @@ func (s *identitiesService) GetIdentityEntitlements(ctx context.Context, identit
 
 	filter := utils.CreateTokenPaginationFilter(params.Size, params.NextToken, params.NextPageToken)
 	entitlementToken := pagination.NewEntitlementToken(filter.Token())
-	tuples, nextEntitlmentToken, err := s.jimm.ListObjectRelations(ctx, user, objUser.Tag().String(), int32(filter.Limit()), entitlementToken) // #nosec G115 accept integer conversion
+	tuples, nextEntitlmentToken, err := s.jimm.PermissionManager.ListObjectRelations(ctx, user, objUser.Tag().String(), int32(filter.Limit()), entitlementToken) // #nosec G115 accept integer conversion
 	if err != nil {
 		return nil, err
 	}
@@ -280,13 +280,13 @@ func (s *identitiesService) PatchIdentityEntitlements(ctx context.Context, ident
 		return false, err
 	}
 	if toAdd != nil {
-		err := s.jimm.AddRelation(ctx, user, toAdd)
+		err := s.jimm.PermissionManager.AddRelation(ctx, user, toAdd)
 		if err != nil {
 			return false, err
 		}
 	}
 	if toRemove != nil {
-		err := s.jimm.RemoveRelation(ctx, user, toRemove)
+		err := s.jimm.PermissionManager.RemoveRelation(ctx, user, toRemove)
 		if err != nil {
 			return false, err
 		}

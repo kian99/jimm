@@ -304,10 +304,10 @@ func userModelAccess(ctx context.Context, user *openfga.User, model names.ModelT
 
 // CredentialContents implements the CredentialContents method of the Cloud (v5) facade.
 func (r *controllerRoot) CredentialContents(ctx context.Context, args jujuparams.CloudCredentialArgs) (jujuparams.CredentialContentResults, error) {
-	return getIdentityCredentials(ctx, r.user, r.jimm, args)
+	return r.getIdentityCredentials(ctx, r.user, args)
 }
 
-func getIdentityCredentials(ctx context.Context, user *openfga.User, j JIMM, args jujuparams.CloudCredentialArgs) (jujuparams.CredentialContentResults, error) {
+func (r *controllerRoot) getIdentityCredentials(ctx context.Context, user *openfga.User, args jujuparams.CloudCredentialArgs) (jujuparams.CredentialContentResults, error) {
 	const op = errors.Op("jujuapi.CredentialContents")
 
 	credentialContents := func(c *dbmodel.CloudCredential) (*jujuparams.ControllerCredentialInfo, error) {
@@ -320,7 +320,7 @@ func getIdentityCredentials(ctx context.Context, user *openfga.User, j JIMM, arg
 			content.Valid = &c.Valid.Bool
 		}
 		var err error
-		content.Attributes, _, err = j.GetCloudCredentialAttributes(ctx, user, c, args.IncludeSecrets)
+		content.Attributes, _, err = r.jimm.GetCloudCredentialAttributes(ctx, user, c, args.IncludeSecrets)
 		if err != nil {
 			return nil, errors.E(err)
 		}
@@ -344,7 +344,7 @@ func getIdentityCredentials(ctx context.Context, user *openfga.User, j JIMM, arg
 	results := make([]jujuparams.CredentialContentResult, len(args.Credentials))
 	for i, arg := range args.Credentials {
 		cct := names.NewCloudCredentialTag(fmt.Sprintf("%s/%s/%s", arg.CloudName, user.Name, arg.CredentialName))
-		cred, err := j.GetCloudCredential(ctx, user, cct)
+		cred, err := r.jimm.GetCloudCredential(ctx, user, cct)
 		if err != nil {
 			results[i].Error = mapError(errors.E(op, err))
 			continue
@@ -358,7 +358,7 @@ func getIdentityCredentials(ctx context.Context, user *openfga.User, j JIMM, arg
 		return jujuparams.CredentialContentResults{Results: results}, nil
 	}
 
-	err := j.ForEachUserCloudCredential(ctx, user.Identity, names.CloudTag{}, func(c *dbmodel.CloudCredential) error {
+	err := r.jimm.ForEachUserCloudCredential(ctx, user.Identity, names.CloudTag{}, func(c *dbmodel.CloudCredential) error {
 		var result jujuparams.CredentialContentResult
 		var err error
 		result.Result, err = credentialContents(c)

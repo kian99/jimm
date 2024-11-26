@@ -7,6 +7,7 @@ import (
 
 	jujuparams "github.com/juju/juju/rpc/params"
 
+	"github.com/canonical/jimm/v3/internal/jimm"
 	"github.com/canonical/jimm/v3/internal/openfga"
 )
 
@@ -36,7 +37,7 @@ func RunModelAccessWatcher(w *modelAccessWatcher) {
 	go w.loop()
 }
 
-func NewControllerRoot(j JIMM, p Params) *controllerRoot {
+func NewControllerRoot(j *jimm.JIMM, p Params) *controllerRoot {
 	return newControllerRoot(j, p, "")
 }
 

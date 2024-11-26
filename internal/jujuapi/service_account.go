@@ -125,7 +125,7 @@ func (r *controllerRoot) ListServiceAccountCredentials(ctx context.Context, req 
 	if err != nil {
 		return jujuparams.CredentialContentResults{}, errors.E(op, err)
 	}
-	return getIdentityCredentials(ctx, targetIdentity, r.jimm, req.CloudCredentialArgs)
+	return r.getIdentityCredentials(ctx, targetIdentity, req.CloudCredentialArgs)
 }
 
 // GrantServiceAccountAccess is the method handler for granting new users/groups with access
@@ -144,5 +144,5 @@ func (r *controllerRoot) GrantServiceAccountAccess(ctx context.Context, req apip
 	}
 	svcAccTag := jimmnames.NewServiceAccountTag(clientIdWithDomain)
 
-	return r.jimm.GrantServiceAccountAccess(ctx, r.user, svcAccTag, req.Entities)
+	return r.jimm.PermissionManager.GrantServiceAccountAccess(ctx, r.user, svcAccTag, req.Entities)
 }

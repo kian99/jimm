@@ -8,13 +8,14 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/canonical/jimm/v3/internal/jimm"
 	qt "github.com/frankban/quicktest"
 )
 
 func TestControllerPing(t *testing.T) {
 	c := qt.New(t)
-
-	r := newControllerRoot(nil, Params{}, "")
+	j := jimm.JIMM{}
+	r := newControllerRoot(&j, Params{}, "")
 	defer r.cleanup()
 	var calls uint32
 	r.setPingF(func() { atomic.AddUint32(&calls, 1) })

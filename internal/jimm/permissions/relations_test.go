@@ -1,52 +1,26 @@
 // Copyright 2024 Canonical.
 
-package jimm_test
+package permissions_test
 
 import (
 	"context"
-	"testing"
-	"time"
 
 	qt "github.com/frankban/quicktest"
-	"github.com/google/uuid"
 
 	"github.com/canonical/jimm/v3/internal/common/pagination"
-	"github.com/canonical/jimm/v3/internal/db"
-	"github.com/canonical/jimm/v3/internal/dbmodel"
-	"github.com/canonical/jimm/v3/internal/jimm"
 	"github.com/canonical/jimm/v3/internal/openfga"
 	"github.com/canonical/jimm/v3/internal/openfga/names"
-	"github.com/canonical/jimm/v3/internal/testutils/jimmtest"
 	apiparams "github.com/canonical/jimm/v3/pkg/api/params"
 )
 
-func TestListRelationshipTuples(t *testing.T) {
+func (s *permissionManagerSuite) TestListRelationshipTuples(c *qt.C) {
 	// setup
-	c := qt.New(t)
+	c.Parallel()
 	ctx := context.Background()
 
-	ofgaClient, _, _, err := jimmtest.SetupTestOFGAClient(c.Name())
-	c.Assert(err, qt.IsNil)
+	user, _, controller, model, _, _, _, _ := createTestControllerEnvironment(ctx, c, *s.db)
 
-	now := time.Now().UTC().Round(time.Millisecond)
-	j := &jimm.JIMM{
-		UUID: uuid.NewString(),
-		Database: db.Database{
-			DB: jimmtest.PostgresDB(c, func() time.Time { return now }),
-		},
-		OpenFGAClient: ofgaClient,
-	}
-
-	err = j.Database.Migrate(ctx, false)
-	c.Assert(err, qt.IsNil)
-
-	u := openfga.NewUser(&dbmodel.Identity{Name: "admin@canonical.com"}, ofgaClient)
-	u.JimmAdmin = true
-
-	user, _, controller, model, _, _, _, _ := createTestControllerEnvironment(ctx, c, j.Database)
-	c.Assert(err, qt.IsNil)
-
-	err = j.AddRelation(ctx, u, []apiparams.RelationshipTuple{
+	err := s.manager.AddRelation(ctx, s.adminUser, []apiparams.RelationshipTuple{
 		{
 			Object:       user.Tag().String(),
 			Relation:     names.ReaderRelation.String(),
@@ -155,7 +129,7 @@ func TestListRelationshipTuples(t *testing.T) {
 
 	for _, t := range testCases {
 		c.Run(t.description, func(c *qt.C) {
-			tuples, _, err := j.ListRelationshipTuples(ctx, u, apiparams.RelationshipTuple{
+			tuples, _, err := s.manager.ListRelationshipTuples(ctx, s.adminUser, apiparams.RelationshipTuple{
 				Object:       t.object,
 				Relation:     t.relation,
 				TargetObject: t.targetObject,
@@ -170,32 +144,13 @@ func TestListRelationshipTuples(t *testing.T) {
 	}
 }
 
-func TestListObjectRelations(t *testing.T) {
-	c := qt.New(t)
+func (s *permissionManagerSuite) TestListObjectRelations(c *qt.C) {
+	c.Parallel()
 	ctx := context.Background()
 
-	ofgaClient, _, _, err := jimmtest.SetupTestOFGAClient(c.Name())
-	c.Assert(err, qt.IsNil)
+	user, group, controller, model, _, cloud, _, _ := createTestControllerEnvironment(ctx, c, *s.db)
 
-	now := time.Now().UTC().Round(time.Millisecond)
-	j := &jimm.JIMM{
-		UUID: uuid.NewString(),
-		Database: db.Database{
-			DB: jimmtest.PostgresDB(c, func() time.Time { return now }),
-		},
-		OpenFGAClient: ofgaClient,
-	}
-
-	err = j.Database.Migrate(ctx, false)
-	c.Assert(err, qt.IsNil)
-
-	u := openfga.NewUser(&dbmodel.Identity{Name: "admin@canonical.com"}, ofgaClient)
-	u.JimmAdmin = true
-
-	user, group, controller, model, _, cloud, _, _ := createTestControllerEnvironment(ctx, c, j.Database)
-	c.Assert(err, qt.IsNil)
-
-	err = j.AddRelation(ctx, u, []apiparams.RelationshipTuple{
+	err := s.manager.AddRelation(ctx, s.adminUser, []apiparams.RelationshipTuple{
 		{
 			Object:       user.Tag().String(),
 			Relation:     names.ReaderRelation.String(),
@@ -282,7 +237,7 @@ func TestListObjectRelations(t *testing.T) {
 			tuples := []openfga.Tuple{}
 			numPages := 0
 			for {
-				res, nextToken, err := j.ListObjectRelations(ctx, u, t.object, t.pageSize, token)
+				res, nextToken, err := s.manager.ListObjectRelations(ctx, s.adminUser, t.object, t.pageSize, token)
 				if t.expectedError != "" {
 					c.Assert(err, qt.ErrorMatches, t.expectedError)
 					break

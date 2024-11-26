@@ -11,14 +11,14 @@ import (
 
 	qt "github.com/frankban/quicktest"
 
+	"github.com/canonical/jimm/v3/internal/jimm"
 	"github.com/canonical/jimm/v3/internal/jimmhttp/rebac_admin"
-	"github.com/canonical/jimm/v3/internal/testutils/jimmtest"
 )
 
 // test capabilities are reachable
 func TestCapabilities(t *testing.T) {
 	c := qt.New(t)
-	jimm := jimmtest.JIMM{}
+	jimm := jimm.JIMM{}
 	ctx := context.Background()
 	handlers, err := rebac_admin.SetupBackend(ctx, &jimm)
 	c.Assert(err, qt.IsNil)

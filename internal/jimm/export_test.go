@@ -11,7 +11,6 @@ import (
 	"github.com/canonical/jimm/v3/internal/db"
 	"github.com/canonical/jimm/v3/internal/dbmodel"
 	"github.com/canonical/jimm/v3/internal/openfga"
-	ofganames "github.com/canonical/jimm/v3/internal/openfga/names"
 )
 
 var (
@@ -21,7 +20,6 @@ var (
 	NewControllerClient            = &newControllerClient
 	FillMigrationTarget            = fillMigrationTarget
 	InitiateMigration              = &initiateMigration
-	ResolveTag                     = resolveTag
 )
 
 func WatchController(w *Watcher, ctx context.Context, ctl *dbmodel.Controller) error {
@@ -48,10 +46,6 @@ func NewWatcherWithDeltaProcessedChannel(db db.Database, dialer Dialer, pubsub P
 
 func (j *JIMM) ListApplicationOfferUsers(ctx context.Context, offer names.ApplicationOfferTag, user *dbmodel.Identity, adminAccess bool) ([]jujuparams.OfferUserDetails, error) {
 	return j.listApplicationOfferUsers(ctx, offer, user, adminAccess)
-}
-
-func (j *JIMM) ParseAndValidateTag(ctx context.Context, key string) (*ofganames.Tag, error) {
-	return j.parseAndValidateTag(ctx, key)
 }
 
 func (j *JIMM) GetUser(ctx context.Context, identifier string) (*openfga.User, error) {

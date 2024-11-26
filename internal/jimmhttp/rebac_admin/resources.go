@@ -11,15 +11,15 @@ import (
 	"github.com/canonical/jimm/v3/internal/common/pagination"
 	"github.com/canonical/jimm/v3/internal/db"
 	"github.com/canonical/jimm/v3/internal/errors"
+	"github.com/canonical/jimm/v3/internal/jimm"
 	"github.com/canonical/jimm/v3/internal/jimmhttp/rebac_admin/utils"
-	"github.com/canonical/jimm/v3/internal/jujuapi"
 )
 
 type resourcesService struct {
-	jimm jujuapi.JIMM
+	jimm *jimm.JIMM
 }
 
-func newResourcesService(jimm jujuapi.JIMM) *resourcesService {
+func newResourcesService(jimm *jimm.JIMM) *resourcesService {
 	return &resourcesService{
 		jimm: jimm,
 	}

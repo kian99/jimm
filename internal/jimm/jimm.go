@@ -33,6 +33,8 @@ import (
 	"github.com/canonical/jimm/v3/internal/openfga"
 	ofganames "github.com/canonical/jimm/v3/internal/openfga/names"
 	"github.com/canonical/jimm/v3/internal/pubsub"
+	apiparams "github.com/canonical/jimm/v3/pkg/api/params"
+	jimmnames "github.com/canonical/jimm/v3/pkg/names"
 )
 
 var (
@@ -90,6 +92,12 @@ type JIMM struct {
 
 	// RoleManager provides a means to manage roles within JIMM.
 	RoleManager RoleManager
+
+	// RoleManager provides a means to manage groups within JIMM.
+	GroupManager GroupManager
+
+	// PermissionManager provides a means to manage permissions within JIMM.
+	PermissionManager PermissionManager
 }
 
 // RoleManager provides a means to manage roles within JIMM.
@@ -109,6 +117,38 @@ type RoleManager interface {
 	ListRoles(ctx context.Context, user *openfga.User, pagination pagination.LimitOffsetPagination, match string) ([]dbmodel.RoleEntry, error)
 	// CountRoles returns the number of roles that exist.
 	CountRoles(ctx context.Context, user *openfga.User) (int, error)
+}
+
+// GroupManager provides a means to manage groups within JIMM.
+type GroupManager interface {
+	// AddGroup adds a role to JIMM.
+	AddGroup(ctx context.Context, user *openfga.User, roleName string) (*dbmodel.GroupEntry, error)
+	// GetGroupByUUID returns a role based on the provided UUID.
+	GetGroupByUUID(ctx context.Context, user *openfga.User, uuid string) (*dbmodel.GroupEntry, error)
+	// GetGroupByName returns a role based on the provided name.
+	GetGroupByName(ctx context.Context, user *openfga.User, name string) (*dbmodel.GroupEntry, error)
+	// RemoveGroup removes the role from JIMM in both the store and authorisation store.
+	RemoveGroup(ctx context.Context, user *openfga.User, roleName string) error
+	// RenameGroup renames a role in JIMM's DB.
+	RenameGroup(ctx context.Context, user *openfga.User, uuid, newName string) error
+	// ListGroups returns a list of roles known to JIMM.
+	// `match` will filter the list fuzzy matching role's name or uuid.
+	ListGroups(ctx context.Context, user *openfga.User, pagination pagination.LimitOffsetPagination, match string) ([]dbmodel.GroupEntry, error)
+	// CountGroups returns the number of roles that exist.
+	CountGroups(ctx context.Context, user *openfga.User) (int, error)
+}
+
+// PermissionManager provides a way to manage permissions within JIMM.
+type PermissionManager interface {
+	AddRelation(ctx context.Context, user *openfga.User, tuples []apiparams.RelationshipTuple) error
+	RemoveRelation(ctx context.Context, user *openfga.User, tuples []apiparams.RelationshipTuple) error
+	CheckRelation(ctx context.Context, user *openfga.User, tuple apiparams.RelationshipTuple, trace bool) (_ bool, err error)
+	ListRelationshipTuples(ctx context.Context, user *openfga.User, tuple apiparams.RelationshipTuple, pageSize int32, continuationToken string) ([]openfga.Tuple, string, error)
+	ListObjectRelations(ctx context.Context, user *openfga.User, object string, pageSize int32, entitlementToken pagination.EntitlementToken) ([]openfga.Tuple, pagination.EntitlementToken, error)
+	ToJAASTag(ctx context.Context, tag *ofganames.Tag, resolveUUIDs bool) (string, error)
+	GrantAuditLogAccess(ctx context.Context, user *openfga.User, targetUserTag names.UserTag) error
+	RevokeAuditLogAccess(ctx context.Context, user *openfga.User, targetUserTag names.UserTag) error
+	GrantServiceAccountAccess(ctx context.Context, u *openfga.User, svcAccTag jimmnames.ServiceAccountTag, entities []string) error
 }
 
 // ResourceTag returns JIMM's controller tag stating its UUID.

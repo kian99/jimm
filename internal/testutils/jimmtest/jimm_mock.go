@@ -29,7 +29,7 @@ import (
 // will delegate to the requested funcion or if the funcion is nil return
 // a NotImplemented error.
 type JIMM struct {
-	mocks.RelationService
+	mocks.PermissionService
 	mocks.GroupService
 	mocks.ControllerService
 	mocks.LoginService
