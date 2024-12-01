@@ -57,7 +57,7 @@ func (s *namesSuite) TestFromGenericResourceTag(c *gc.C) {
 	c.Assert(result, gc.DeepEquals, ofganames.NewTag(id.String(), names.ModelTagKind, ""))
 }
 
-func (s *namesSuite) TestConvertJujuRelation(c *gc.C) {
+func (s *namesSuite) TestToOpenFGARelation(c *gc.C) {
 	// unusedAccessLevels are access levels that are not
 	// represented in JIMM's OpenFGA model and should return
 	// an error.
@@ -68,7 +68,7 @@ func (s *namesSuite) TestConvertJujuRelation(c *gc.C) {
 	}
 	for i, level := range permission.AllAccessLevels {
 		c.Logf("running test %d: %s", i, level)
-		_, err := ofganames.ConvertJujuRelation(string(level))
+		_, err := ofganames.ToOpenFGARelation(string(level))
 		if _, ok := unusedAccessLevels[level]; ok {
 			c.Assert(err, gc.NotNil)
 		} else {

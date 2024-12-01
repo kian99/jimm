@@ -4,23 +4,18 @@ package permissions_test
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
-	"time"
 
 	"github.com/canonical/ofga"
 	petname "github.com/dustinkirkland/golang-petname"
 	qt "github.com/frankban/quicktest"
 	"github.com/google/uuid"
-	"github.com/juju/juju/core/crossmodel"
-	"github.com/juju/juju/state"
 	"github.com/juju/names/v5"
 
-	"github.com/canonical/jimm/v3/internal/db"
-	"github.com/canonical/jimm/v3/internal/dbmodel"
 	"github.com/canonical/jimm/v3/internal/jimm/permissions"
 	"github.com/canonical/jimm/v3/internal/openfga"
 	ofganames "github.com/canonical/jimm/v3/internal/openfga/names"
+	"github.com/canonical/jimm/v3/internal/testutils/jimmtest"
 	jimmnames "github.com/canonical/jimm/v3/pkg/names"
 )
 
@@ -150,7 +145,7 @@ func (s *permissionManagerSuite) TestParseAndValidateTag(c *qt.C) {
 	c.Parallel()
 	ctx := context.Background()
 
-	user, _, _, model, _, _, _, _ := createTestControllerEnvironment(ctx, c, *s.db)
+	user, _, _, model, _, _, _, _ := jimmtest.CreateTestControllerEnvironment(ctx, c, *s.db)
 
 	jimmTag := "model-" + user.Name + "/" + model.Name + "#administrator"
 
@@ -186,7 +181,7 @@ func (s *permissionManagerSuite) TestResolveTags(c *qt.C) {
 	c.Parallel()
 	ctx := context.Background()
 
-	identity, group, controller, model, offer, cloud, _, role := createTestControllerEnvironment(ctx, c, *s.db)
+	identity, group, controller, model, offer, cloud, _, role := jimmtest.CreateTestControllerEnvironment(ctx, c, *s.db)
 
 	testCases := []struct {
 		desc     string
@@ -263,7 +258,7 @@ func (s *permissionManagerSuite) TestResolveTupleObjectHandlesErrors(c *qt.C) {
 	c.Parallel()
 	ctx := context.Background()
 
-	_, _, controller, model, offer, _, _, _ := createTestControllerEnvironment(ctx, c, *s.db)
+	_, _, controller, model, offer, _, _, _ := jimmtest.CreateTestControllerEnvironment(ctx, c, *s.db)
 
 	type test struct {
 		input string
@@ -322,7 +317,7 @@ func (s *permissionManagerSuite) TestToJAASTag(c *qt.C) {
 	c.Parallel()
 	ctx := context.Background()
 
-	user, group, controller, model, applicationOffer, cloud, _, role := createTestControllerEnvironment(ctx, c, *s.db)
+	user, group, controller, model, applicationOffer, cloud, _, role := jimmtest.CreateTestControllerEnvironment(ctx, c, *s.db)
 
 	serviceAccountId := petname.Generate(2, "-") + "@serviceaccount"
 
@@ -373,7 +368,7 @@ func (s *permissionManagerSuite) TestToJAASTagNoUUIDResolution(c *qt.C) {
 	c.Parallel()
 	ctx := context.Background()
 
-	user, group, controller, model, applicationOffer, cloud, _, role := createTestControllerEnvironment(ctx, c, *s.db)
+	user, group, controller, model, applicationOffer, cloud, _, role := jimmtest.CreateTestControllerEnvironment(ctx, c, *s.db)
 	serviceAccountId := petname.Generate(2, "-") + "@serviceaccount"
 
 	tests := []struct {
@@ -417,119 +412,6 @@ func (s *permissionManagerSuite) TestToJAASTagNoUUIDResolution(c *qt.C) {
 			c.Assert(t, qt.Equals, test.expectedJAASTag)
 		}
 	}
-}
-
-// createTestControllerEnvironment is a utility function creating the necessary components of adding a:
-//   - user
-//   - user group
-//   - controller
-//   - model
-//   - application offer
-//   - cloud
-//   - cloud credential
-//   - role
-//
-// Into the test database, returning the dbmodels to be utilised for values within tests.
-//
-// It returns all of the latter, but in addition to those, also:
-//   - an api client to make calls to an httptest instance of the server
-//   - a closure containing a function to close the connection
-//
-// TODO(ale8k): Make this an implicit thing on the JIMM suite per test & refactor the current state.
-// and make the suite argument an interface of the required calls we use here.
-func createTestControllerEnvironment(ctx context.Context, c *qt.C, db db.Database) (
-	dbmodel.Identity,
-	dbmodel.GroupEntry,
-	dbmodel.Controller,
-	dbmodel.Model,
-	dbmodel.ApplicationOffer,
-	dbmodel.Cloud,
-	dbmodel.CloudCredential,
-	dbmodel.RoleEntry) {
-
-	_, err := db.AddGroup(ctx, "test-group")
-	c.Assert(err, qt.IsNil)
-	group := dbmodel.GroupEntry{Name: "test-group"}
-	err = db.GetGroup(ctx, &group)
-	c.Assert(err, qt.IsNil)
-
-	u, err := dbmodel.NewIdentity(petname.Generate(2, "-"+"canonical.com"))
-	c.Assert(err, qt.IsNil)
-
-	c.Assert(db.DB.Create(u).Error, qt.IsNil)
-
-	cloud := dbmodel.Cloud{
-		Name: petname.Generate(2, "-"),
-		Type: "aws",
-		Regions: []dbmodel.CloudRegion{{
-			Name: petname.Generate(2, "-"),
-		}},
-	}
-	c.Assert(db.DB.Create(&cloud).Error, qt.IsNil)
-	id, _ := uuid.NewRandom()
-	controller := dbmodel.Controller{
-		Name:        petname.Generate(2, "-"),
-		UUID:        id.String(),
-		CloudName:   cloud.Name,
-		CloudRegion: cloud.Regions[0].Name,
-		CloudRegions: []dbmodel.CloudRegionControllerPriority{{
-			Priority:      0,
-			CloudRegionID: cloud.Regions[0].ID,
-		}},
-	}
-	err = db.AddController(ctx, &controller)
-	c.Assert(err, qt.IsNil)
-
-	cred := dbmodel.CloudCredential{
-		Name:              petname.Generate(2, "-"),
-		CloudName:         cloud.Name,
-		OwnerIdentityName: u.Name,
-		AuthType:          "empty",
-	}
-	err = db.SetCloudCredential(ctx, &cred)
-	c.Assert(err, qt.IsNil)
-
-	model := dbmodel.Model{
-		Name: petname.Generate(2, "-"),
-		UUID: sql.NullString{
-			String: id.String(),
-			Valid:  true,
-		},
-		OwnerIdentityName: u.Name,
-		ControllerID:      controller.ID,
-		CloudRegionID:     cloud.Regions[0].ID,
-		CloudCredentialID: cred.ID,
-		Life:              state.Alive.String(),
-		Status: dbmodel.Status{
-			Status: "available",
-			Since: sql.NullTime{
-				Time:  time.Now().UTC().Truncate(time.Millisecond),
-				Valid: true,
-			},
-		},
-	}
-
-	err = db.AddModel(ctx, &model)
-	c.Assert(err, qt.IsNil)
-
-	offerName := petname.Generate(2, "-")
-	offerURL, err := crossmodel.ParseOfferURL(controller.Name + ":" + u.Name + "/" + model.Name + "." + offerName)
-	c.Assert(err, qt.IsNil)
-
-	offer := dbmodel.ApplicationOffer{
-		UUID:    id.String(),
-		Name:    offerName,
-		ModelID: model.ID,
-		URL:     offerURL.String(),
-	}
-	err = db.AddApplicationOffer(context.Background(), &offer)
-	c.Assert(err, qt.IsNil)
-	c.Assert(len(offer.UUID), qt.Equals, 36)
-
-	role, err := db.AddRole(ctx, petname.Generate(2, "-"))
-	c.Assert(err, qt.IsNil)
-
-	return *u, group, controller, model, offer, cloud, cred, *role
 }
 
 func (s *permissionManagerSuite) TestOpenFGACleanup(c *qt.C) {

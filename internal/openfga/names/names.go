@@ -121,9 +121,31 @@ func BlankKindTag(kind string) (*Tag, error) {
 	}
 }
 
-// ConvertJujuRelation takes a juju relation string and converts it to
+// ToJujuPermission converts OpenFGA relations that have a Juju equivalent
+// into a Juju appropriate access level.
+func ToJujuPermission(relation cofga.Relation) permission.Access {
+	const op = errors.Op("ConvertJujuRelation")
+	switch relation {
+	case AdministratorRelation:
+		return permission.AdminAccess
+	case ReaderRelation:
+		return permission.ReadAccess
+	case WriterRelation:
+		return permission.WriteAccess
+	case ConsumerRelation:
+		return permission.ConsumeAccess
+	case CanAddModelRelation:
+		return permission.AddModelAccess
+	case NoRelation:
+		return permission.NoAccess
+	default:
+		return permission.NoAccess
+	}
+}
+
+// ToOpenFGARelation takes a juju relation string and converts it to
 // one appropriate for use with OpenFGA.
-func ConvertJujuRelation(relation string) (cofga.Relation, error) {
+func ToOpenFGARelation(relation string) (cofga.Relation, error) {
 	const op = errors.Op("ConvertJujuRelation")
 	switch relation {
 	case string(permission.AdminAccess):

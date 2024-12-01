@@ -101,6 +101,21 @@ func (j *permissionManager) GrantServiceAccountAccess(ctx context.Context, u *op
 	return nil
 }
 
+// GetUserControllerAccess returns the user's level of access to the desired controller.
+func (j *permissionManager) GetUserControllerAccess(ctx context.Context, user *openfga.User, controller names.ControllerTag) (openfga.Relation, error) {
+	return user.GetControllerAccess(ctx, controller), nil
+}
+
+// GetUserModelAccess returns the access level a user has against a specific model.
+func (j *permissionManager) GetUserModelAccess(ctx context.Context, user *openfga.User, model names.ModelTag) (openfga.Relation, error) {
+	return user.GetModelAccess(ctx, model), nil
+}
+
+// GetUserCloudAccess returns users access level for the specified cloud.
+func (j *permissionManager) GetUserCloudAccess(ctx context.Context, user *openfga.User, cloud names.CloudTag) (openfga.Relation, error) {
+	return user.GetCloudAccess(ctx, cloud), nil
+}
+
 // OpenFGACleanup queries OpenFGA for all existing tuples, tries to resolve each tuple and removes those
 // that JIMM cannot resolved - orphaned tuples. JIMM not being able to resolve a tuple means that the
 // corresponding entity has been removed from JIMM's database.

@@ -387,12 +387,6 @@ func (j *JIMM) GetJimmControllerAccess(ctx context.Context, user *openfga.User, 
 	return "login", nil
 }
 
-// GetUserControllerAccess returns the user's level of access to the desired controller.
-func (j *JIMM) GetUserControllerAccess(ctx context.Context, user *openfga.User, controller names.ControllerTag) (string, error) {
-	accessLevel := user.GetControllerAccess(ctx, controller)
-	return ToControllerAccessString(accessLevel), nil
-}
-
 type modelImporter struct {
 	jimm      *JIMM
 	model     dbmodel.Model

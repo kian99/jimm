@@ -20,12 +20,6 @@ import (
 	ofganames "github.com/canonical/jimm/v3/internal/openfga/names"
 )
 
-// GetUserCloudAccess returns users access level for the specified cloud.
-func (j *JIMM) GetUserCloudAccess(ctx context.Context, user *openfga.User, cloud names.CloudTag) (string, error) {
-	accessLevel := user.GetCloudAccess(ctx, cloud)
-	return ToCloudAccessString(accessLevel), nil
-}
-
 // GetCloud retrieves the cloud for the given cloud tag. If the cloud
 // cannot be found then an error with the code CodeNotFound is
 // returned. If the user does not have permission to view the cloud then an
@@ -42,15 +36,12 @@ func (j *JIMM) GetCloud(ctx context.Context, user *openfga.User, tag names.Cloud
 		return cl, errors.E(op, err)
 	}
 
-	accessLevel, err := j.GetUserCloudAccess(ctx, user, tag)
-	if err != nil {
-		return dbmodel.Cloud{}, errors.E(op, err)
-	}
+	accessLevel := user.GetCloudAccess(ctx, tag)
 
 	switch accessLevel {
-	case "":
+	case ofganames.NoRelation:
 		return dbmodel.Cloud{}, errors.E(op, errors.CodeUnauthorized, "unauthorized")
-	case "admin":
+	case ofganames.AdministratorRelation:
 		return cl, nil
 	default:
 		return cl, nil
@@ -73,8 +64,8 @@ func (j *JIMM) ForEachUserCloud(ctx context.Context, user *openfga.User, f func(
 		return errors.E(op, err, "cannot load clouds")
 	}
 	for _, cloud := range clouds {
-		userAccess := ToCloudAccessString(user.GetCloudAccess(ctx, cloud.ResourceTag()))
-		if userAccess == "" {
+		userAccess := user.GetCloudAccess(ctx, cloud.ResourceTag())
+		if userAccess == ofganames.NoRelation {
 			// If user does not have access to the cloud,
 			// we skip this cloud.
 			continue
@@ -378,21 +369,10 @@ func (j *JIMM) doCloudAdmin(ctx context.Context, user *openfga.User, ct names.Cl
 // CodeNotFound is returned. If the authenticated user does not have admin
 // access to the cloud then an error with the code CodeUnauthorized is
 // returned.
-func (j *JIMM) GrantCloudAccess(ctx context.Context, user *openfga.User, ct names.CloudTag, ut names.UserTag, access string) error {
+func (j *JIMM) GrantCloudAccess(ctx context.Context, user *openfga.User, ct names.CloudTag, ut names.UserTag, access openfga.Relation) error {
 	const op = errors.Op("jimm.GrantCloudAccess")
 
-	targetRelation, err := ToCloudRelation(access)
-	if err != nil {
-		zapctx.Debug(
-			ctx,
-			"failed to recognize given access",
-			zaputil.Error(err),
-			zap.String("access", string(access)),
-		)
-		return errors.E(op, errors.CodeBadRequest, fmt.Sprintf("failed to recognize given access: %q", access), err)
-	}
-
-	err = j.doCloudAdmin(ctx, user, ct, func(_ *dbmodel.Cloud, _ API) error {
+	err := j.doCloudAdmin(ctx, user, ct, func(_ *dbmodel.Cloud, _ API) error {
 		targetUser := &dbmodel.Identity{}
 		targetUser.SetTag(ut)
 		if err := j.Database.GetIdentity(ctx, targetUser); err != nil {
@@ -401,7 +381,7 @@ func (j *JIMM) GrantCloudAccess(ctx context.Context, user *openfga.User, ct name
 		targetOfgaUser := openfga.NewUser(targetUser, j.OpenFGAClient)
 
 		currentRelation := targetOfgaUser.GetCloudAccess(ctx, ct)
-		switch targetRelation {
+		switch access {
 		case ofganames.CanAddModelRelation:
 			switch currentRelation {
 			case ofganames.NoRelation:
@@ -418,7 +398,7 @@ func (j *JIMM) GrantCloudAccess(ctx context.Context, user *openfga.User, ct name
 			}
 		}
 
-		if err := targetOfgaUser.SetCloudAccess(ctx, ct, targetRelation); err != nil {
+		if err := targetOfgaUser.SetCloudAccess(ctx, ct, access); err != nil {
 			return errors.E(err, op, "failed to set cloud access")
 		}
 		return nil
@@ -443,21 +423,10 @@ func (j *JIMM) GrantCloudAccess(ctx context.Context, user *openfga.User, ct name
 // CodeNotFound is returned. If the authenticated user does not have admin
 // access to the cloud then an error with the code CodeUnauthorized is
 // returned.
-func (j *JIMM) RevokeCloudAccess(ctx context.Context, user *openfga.User, ct names.CloudTag, ut names.UserTag, access string) error {
+func (j *JIMM) RevokeCloudAccess(ctx context.Context, user *openfga.User, ct names.CloudTag, ut names.UserTag, access openfga.Relation) error {
 	const op = errors.Op("jimm.RevokeCloudAccess")
 
-	targetRelation, err := ToCloudRelation(access)
-	if err != nil {
-		zapctx.Debug(
-			ctx,
-			"failed to recognize given access",
-			zaputil.Error(err),
-			zap.String("access", string(access)),
-		)
-		return errors.E(op, errors.CodeBadRequest, fmt.Sprintf("failed to recognize given access: %q", access), err)
-	}
-
-	err = j.doCloudAdmin(ctx, user, ct, func(_ *dbmodel.Cloud, _ API) error {
+	err := j.doCloudAdmin(ctx, user, ct, func(_ *dbmodel.Cloud, _ API) error {
 		targetUser := &dbmodel.Identity{}
 		targetUser.SetTag(ut)
 		if err := j.Database.GetIdentity(ctx, targetUser); err != nil {
@@ -468,7 +437,7 @@ func (j *JIMM) RevokeCloudAccess(ctx context.Context, user *openfga.User, ct nam
 		currentRelation := targetOfgaUser.GetCloudAccess(ctx, ct)
 
 		var relationsToRevoke []openfga.Relation
-		switch targetRelation {
+		switch access {
 		case ofganames.CanAddModelRelation:
 			switch currentRelation {
 			case ofganames.NoRelation:
@@ -559,11 +528,8 @@ func (j *JIMM) UpdateCloud(ctx context.Context, user *openfga.User, ct names.Clo
 	if err := j.Database.GetCloud(ctx, &c); err != nil {
 		return errors.E(op, err)
 	}
-	cloudAccess, err := j.GetUserCloudAccess(ctx, user, c.ResourceTag())
-	if err != nil {
-		return errors.E(op, err)
-	}
-	if cloudAccess != "admin" {
+	cloudAccess := user.GetCloudAccess(ctx, c.ResourceTag()) //, err := j.GetUserCloudAccess(ctx, user, c.ResourceTag())
+	if cloudAccess != ofganames.AdministratorRelation {
 		// If the user doesn't have admin access on the cloud return
 		// an unauthorized error.
 		return errors.E(op, errors.CodeUnauthorized, "unauthorized")
@@ -581,7 +547,7 @@ func (j *JIMM) UpdateCloud(ctx context.Context, user *openfga.User, ct names.Clo
 		}
 	}
 
-	err = j.forEachController(ctx, controllers, func(ctl *dbmodel.Controller, api API) error {
+	err := j.forEachController(ctx, controllers, func(ctl *dbmodel.Controller, api API) error {
 		return api.UpdateCloud(ctx, ct, cloud)
 	})
 	if err != nil {

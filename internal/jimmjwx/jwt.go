@@ -10,6 +10,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/golang-lru/v2/expirable"
+	"github.com/juju/juju/core/permission"
+	"github.com/juju/names/v5"
 	"github.com/juju/zaputil/zapctx"
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwk"
@@ -78,7 +80,7 @@ type JWTParams struct {
 	// User is the "sub" of the JWT
 	User string
 	// Access is a claim of key/values denoting what the user wishes to access
-	Access map[string]string
+	Access map[names.Tag]permission.Access
 }
 
 // NewJWTService returns a new JWT service for handling JIMMs JWTs.

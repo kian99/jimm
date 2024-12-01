@@ -261,7 +261,7 @@ func (s *Service) OpenFGACleanup(ctx context.Context, trigger <-chan time.Time) 
 	for {
 		select {
 		case <-trigger:
-			err := s.jimm.OpenFGACleanup(ctx)
+			err := s.jimm.PermissionManager.OpenFGACleanup(ctx)
 			if err != nil {
 				zapctx.Error(ctx, "openfga cleanup", zap.Error(err))
 				continue
@@ -433,7 +433,7 @@ func NewService(ctx context.Context, p Params) (*Service, error) {
 
 	s.mux.Mount("/metrics", promhttp.Handler())
 
-	s.mux.Mount("/rebac", middleware.AuthenticateRebac("/rebac", rebacBackend.Handler(""), &s.jimm))
+	s.mux.Mount("/rebac", middleware.AuthenticateRebac("/rebac", rebacBackend.Handler(""), s.jimm.LoginManager))
 
 	mountHandler(
 		"/debug",

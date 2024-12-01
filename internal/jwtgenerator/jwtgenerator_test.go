@@ -1,26 +1,19 @@
-// Copyright 2024 Canonical.
-
-package jimm_test
+package jwtgenerator_test
 
 import (
 	"context"
-	"database/sql"
 	"testing"
-	"time"
 
-	petname "github.com/dustinkirkland/golang-petname"
-	qt "github.com/frankban/quicktest"
-	"github.com/google/uuid"
-	"github.com/juju/juju/core/crossmodel"
-	"github.com/juju/juju/state"
-	"github.com/juju/names/v5"
-
-	"github.com/canonical/jimm/v3/internal/db"
 	"github.com/canonical/jimm/v3/internal/dbmodel"
 	"github.com/canonical/jimm/v3/internal/errors"
-	"github.com/canonical/jimm/v3/internal/jimm"
 	"github.com/canonical/jimm/v3/internal/jimmjwx"
+	"github.com/canonical/jimm/v3/internal/jwtgenerator"
 	"github.com/canonical/jimm/v3/internal/openfga"
+	"github.com/google/uuid"
+	"github.com/juju/juju/core/permission"
+	"github.com/juju/names/v5"
+
+	qt "github.com/frankban/quicktest"
 )
 
 // testDatabase is a database implementation intended for testing the token generator.
@@ -149,10 +142,10 @@ func TestJWTGeneratorMakeLoginToken(t *testing.T) {
 		expectedJWTParams: jimmjwx.JWTParams{
 			Controller: ct.Id(),
 			User:       names.NewUserTag("eve@canonical.com").String(),
-			Access: map[string]string{
-				ct.String():                              "superuser",
-				mt.String():                              "admin",
-				names.NewCloudTag("test-cloud").String(): "add-model",
+			Access: map[names.Tag]permission.Access{
+				ct:                              permission.SuperuserAccess,
+				mt:                              permission.AdminAccess,
+				names.NewCloudTag("test-cloud"): permission.AddModelAccess,
 			},
 		},
 	}, {
@@ -244,7 +237,7 @@ func TestJWTGeneratorMakeLoginToken(t *testing.T) {
 	}}
 
 	for _, test := range tests {
-		generator := jimm.NewJWTGenerator(test.database, test.accessChecker, test.jwtService)
+		generator := jwtgenerator.NewJWTGenerator(test.database, test.accessChecker, test.jwtService)
 		generator.SetTags(mt, ct)
 
 		i, err := dbmodel.NewIdentity(test.username)
@@ -281,10 +274,10 @@ func TestJWTGeneratorMakeToken(t *testing.T) {
 		expectedJWTParams: jimmjwx.JWTParams{
 			Controller: ct.Id(),
 			User:       names.NewUserTag("eve@canonical.com").String(),
-			Access: map[string]string{
-				ct.String():                              "superuser",
-				mt.String():                              "admin",
-				names.NewCloudTag("test-cloud").String(): "add-model",
+			Access: map[names.Tag]permission.Access{
+				ct:                              permission.SuperuserAccess,
+				mt:                              permission.AdminAccess,
+				names.NewCloudTag("test-cloud"): permission.AddModelAccess,
 			},
 		},
 	}, {
@@ -307,17 +300,17 @@ func TestJWTGeneratorMakeToken(t *testing.T) {
 		expectedJWTParams: jimmjwx.JWTParams{
 			Controller: ct.Id(),
 			User:       names.NewUserTag("eve@canonical.com").String(),
-			Access: map[string]string{
-				ct.String():                              "superuser",
-				mt.String():                              "admin",
-				names.NewCloudTag("test-cloud").String(): "add-model",
-				"entity1":                                "access_level1",
+			Access: map[names.Tag]permission.Access{
+				ct:                              permission.SuperuserAccess,
+				mt:                              permission.AdminAccess,
+				names.NewCloudTag("test-cloud"): permission.AddModelAccess,
+				"entity1":                       "access_level1",
 			},
 		},
 	}}
 
 	for _, test := range tests {
-		generator := jimm.NewJWTGenerator(
+		generator := jwtgenerator.NewJWTGenerator(
 			&testDatabase{
 				ctl: dbmodel.Controller{
 					CloudRegions: []dbmodel.CloudRegionControllerPriority{{
@@ -361,117 +354,4 @@ func TestJWTGeneratorMakeToken(t *testing.T) {
 			c.Assert(test.jwtService.params, qt.DeepEquals, test.expectedJWTParams)
 		}
 	}
-}
-
-// createTestControllerEnvironment is a utility function creating the necessary components of adding a:
-//   - user
-//   - user group
-//   - controller
-//   - model
-//   - application offer
-//   - cloud
-//   - cloud credential
-//   - role
-//
-// Into the test database, returning the dbmodels to be utilised for values within tests.
-//
-// It returns all of the latter, but in addition to those, also:
-//   - an api client to make calls to an httptest instance of the server
-//   - a closure containing a function to close the connection
-//
-// TODO(ale8k): Make this an implicit thing on the JIMM suite per test & refactor the current state.
-// and make the suite argument an interface of the required calls we use here.
-func createTestControllerEnvironment(ctx context.Context, c *qt.C, db db.Database) (
-	dbmodel.Identity,
-	dbmodel.GroupEntry,
-	dbmodel.Controller,
-	dbmodel.Model,
-	dbmodel.ApplicationOffer,
-	dbmodel.Cloud,
-	dbmodel.CloudCredential,
-	dbmodel.RoleEntry) {
-
-	_, err := db.AddGroup(ctx, "test-group")
-	c.Assert(err, qt.IsNil)
-	group := dbmodel.GroupEntry{Name: "test-group"}
-	err = db.GetGroup(ctx, &group)
-	c.Assert(err, qt.IsNil)
-
-	u, err := dbmodel.NewIdentity(petname.Generate(2, "-"+"canonical.com"))
-	c.Assert(err, qt.IsNil)
-
-	c.Assert(db.DB.Create(u).Error, qt.IsNil)
-
-	cloud := dbmodel.Cloud{
-		Name: petname.Generate(2, "-"),
-		Type: "aws",
-		Regions: []dbmodel.CloudRegion{{
-			Name: petname.Generate(2, "-"),
-		}},
-	}
-	c.Assert(db.DB.Create(&cloud).Error, qt.IsNil)
-	id, _ := uuid.NewRandom()
-	controller := dbmodel.Controller{
-		Name:        petname.Generate(2, "-"),
-		UUID:        id.String(),
-		CloudName:   cloud.Name,
-		CloudRegion: cloud.Regions[0].Name,
-		CloudRegions: []dbmodel.CloudRegionControllerPriority{{
-			Priority:      0,
-			CloudRegionID: cloud.Regions[0].ID,
-		}},
-	}
-	err = db.AddController(ctx, &controller)
-	c.Assert(err, qt.IsNil)
-
-	cred := dbmodel.CloudCredential{
-		Name:              petname.Generate(2, "-"),
-		CloudName:         cloud.Name,
-		OwnerIdentityName: u.Name,
-		AuthType:          "empty",
-	}
-	err = db.SetCloudCredential(ctx, &cred)
-	c.Assert(err, qt.IsNil)
-
-	model := dbmodel.Model{
-		Name: petname.Generate(2, "-"),
-		UUID: sql.NullString{
-			String: id.String(),
-			Valid:  true,
-		},
-		OwnerIdentityName: u.Name,
-		ControllerID:      controller.ID,
-		CloudRegionID:     cloud.Regions[0].ID,
-		CloudCredentialID: cred.ID,
-		Life:              state.Alive.String(),
-		Status: dbmodel.Status{
-			Status: "available",
-			Since: sql.NullTime{
-				Time:  time.Now().UTC().Truncate(time.Millisecond),
-				Valid: true,
-			},
-		},
-	}
-
-	err = db.AddModel(ctx, &model)
-	c.Assert(err, qt.IsNil)
-
-	offerName := petname.Generate(2, "-")
-	offerURL, err := crossmodel.ParseOfferURL(controller.Name + ":" + u.Name + "/" + model.Name + "." + offerName)
-	c.Assert(err, qt.IsNil)
-
-	offer := dbmodel.ApplicationOffer{
-		UUID:    id.String(),
-		Name:    offerName,
-		ModelID: model.ID,
-		URL:     offerURL.String(),
-	}
-	err = db.AddApplicationOffer(context.Background(), &offer)
-	c.Assert(err, qt.IsNil)
-	c.Assert(len(offer.UUID), qt.Equals, 36)
-
-	role, err := db.AddRole(ctx, petname.Generate(2, "-"))
-	c.Assert(err, qt.IsNil)
-
-	return *u, group, controller, model, offer, cloud, cred, *role
 }

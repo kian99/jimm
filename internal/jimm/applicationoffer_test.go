@@ -363,7 +363,7 @@ func TestRevokeOfferAccess(t *testing.T) {
 				err := db.GetApplicationOffer(ctx, &offer)
 				c.Assert(err, qt.IsNil)
 				appliedRelation := openfga.NewUser(&offerUser, client).GetApplicationOfferAccess(ctx, offer.ResourceTag())
-				c.Assert(jimm.ToOfferAccessString(appliedRelation), qt.Equals, expectedAppliedRelation)
+				c.Assert(ofganames.ToJujuPermission(appliedRelation), qt.Equals, expectedAppliedRelation)
 			}
 
 			err = j.RevokeOfferAccess(ctx, openfga.NewUser(&authenticatedUser, client), offerURL, offerUser.ResourceTag(), revokeAccessLevel)
@@ -531,7 +531,7 @@ func TestGrantOfferAccess(t *testing.T) {
 				err = db.GetApplicationOffer(ctx, &offer)
 				c.Assert(err, qt.IsNil)
 				appliedRelation := openfga.NewUser(&offerUser, client).GetApplicationOfferAccess(ctx, offer.ResourceTag())
-				c.Assert(jimm.ToOfferAccessString(appliedRelation), qt.Equals, test.expectedAccessLevel)
+				c.Assert(ofganames.ToJujuPermission(appliedRelation), qt.Equals, test.expectedAccessLevel)
 			} else {
 				c.Assert(err, qt.ErrorMatches, test.expectedError)
 			}

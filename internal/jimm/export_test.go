@@ -48,14 +48,6 @@ func (j *JIMM) ListApplicationOfferUsers(ctx context.Context, offer names.Applic
 	return j.listApplicationOfferUsers(ctx, offer, user, adminAccess)
 }
 
-func (j *JIMM) GetUser(ctx context.Context, identifier string) (*openfga.User, error) {
-	return j.getUser(ctx, identifier)
-}
-
-func (j *JIMM) UpdateUserLastLogin(ctx context.Context, identifier string) error {
-	return j.updateUserLastLogin(ctx, identifier)
-}
-
 func (j *JIMM) EveryoneUser() *openfga.User {
 	return j.everyoneUser()
 }

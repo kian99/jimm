@@ -4,6 +4,7 @@ package permissions_test
 
 import (
 	"context"
+	"testing"
 	"time"
 
 	"github.com/canonical/jimm/v3/internal/db"
@@ -13,6 +14,7 @@ import (
 	ofganames "github.com/canonical/jimm/v3/internal/openfga/names"
 	"github.com/canonical/jimm/v3/internal/testutils/jimmtest"
 	qt "github.com/frankban/quicktest"
+	"github.com/frankban/quicktest/qtsuite"
 	"github.com/google/uuid"
 	"github.com/juju/names/v5"
 )
@@ -61,4 +63,8 @@ func (s *permissionManagerSuite) Init(c *qt.C) {
 	i2, err := dbmodel.NewIdentity("bob")
 	c.Assert(err, qt.IsNil)
 	s.user = openfga.NewUser(i2, ofgaClient)
+}
+
+func (s *permissionManagerSuite) TestPermissionManager(t *testing.T) {
+	qtsuite.Run(qt.New(t), &permissionManagerSuite{})
 }

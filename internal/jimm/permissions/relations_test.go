@@ -10,6 +10,7 @@ import (
 	"github.com/canonical/jimm/v3/internal/common/pagination"
 	"github.com/canonical/jimm/v3/internal/openfga"
 	"github.com/canonical/jimm/v3/internal/openfga/names"
+	"github.com/canonical/jimm/v3/internal/testutils/jimmtest"
 	apiparams "github.com/canonical/jimm/v3/pkg/api/params"
 )
 
@@ -18,7 +19,7 @@ func (s *permissionManagerSuite) TestListRelationshipTuples(c *qt.C) {
 	c.Parallel()
 	ctx := context.Background()
 
-	user, _, controller, model, _, _, _, _ := createTestControllerEnvironment(ctx, c, *s.db)
+	user, _, controller, model, _, _, _, _ := jimmtest.CreateTestControllerEnvironment(ctx, c, *s.db)
 
 	err := s.manager.AddRelation(ctx, s.adminUser, []apiparams.RelationshipTuple{
 		{
@@ -148,7 +149,7 @@ func (s *permissionManagerSuite) TestListObjectRelations(c *qt.C) {
 	c.Parallel()
 	ctx := context.Background()
 
-	user, group, controller, model, _, cloud, _, _ := createTestControllerEnvironment(ctx, c, *s.db)
+	user, group, controller, model, _, cloud, _, _ := jimmtest.CreateTestControllerEnvironment(ctx, c, *s.db)
 
 	err := s.manager.AddRelation(ctx, s.adminUser, []apiparams.RelationshipTuple{
 		{

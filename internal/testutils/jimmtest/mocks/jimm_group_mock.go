@@ -16,7 +16,7 @@ import (
 	"github.com/canonical/jimm/v3/internal/openfga"
 )
 
-// GroupService is an implementation of the jujuapi.GroupService interface.
+// GroupService is an implementation of the jimm.GroupManager interface.
 type GroupService struct {
 	AddGroup_       func(ctx context.Context, user *openfga.User, name string) (*dbmodel.GroupEntry, error)
 	CountGroups_    func(ctx context.Context, user *openfga.User) (int, error)

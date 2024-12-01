@@ -39,7 +39,7 @@ func (s *identitiesService) ListIdentities(ctx context.Context, params *resource
 		return nil, err
 	}
 
-	count, err := s.jimm.CountIdentities(ctx, user)
+	count, err := s.jimm.IdentityManager.CountIdentities(ctx, user)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +48,7 @@ func (s *identitiesService) ListIdentities(ctx context.Context, params *resource
 	if params.Filter != nil && *params.Filter != "" {
 		match = *params.Filter
 	}
-	users, err := s.jimm.ListIdentities(ctx, user, pagination, match)
+	users, err := s.jimm.IdentityManager.ListIdentities(ctx, user, pagination, match)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func (s *identitiesService) CreateIdentity(ctx context.Context, identity *resour
 
 // GetIdentity returns a single Identity.
 func (s *identitiesService) GetIdentity(ctx context.Context, identityId string) (*resources.Identity, error) {
-	user, err := s.jimm.FetchIdentity(ctx, identityId)
+	user, err := s.jimm.IdentityManager.FetchIdentity(ctx, identityId)
 	if err != nil {
 		if errors.ErrorCode(err) == errors.CodeNotFound {
 			return nil, v1.NewNotFoundError(fmt.Sprintf("User with id %s not found", identityId))
@@ -114,7 +114,7 @@ func (s *identitiesService) GetIdentityGroups(ctx context.Context, identityId st
 	if err != nil {
 		return nil, err
 	}
-	objUser, err := s.jimm.FetchIdentity(ctx, identityId)
+	objUser, err := s.jimm.IdentityManager.FetchIdentity(ctx, identityId)
 	if err != nil {
 		return nil, v1.NewNotFoundError(fmt.Sprintf("User with id %s not found", identityId))
 	}
@@ -165,7 +165,7 @@ func (s *identitiesService) PatchIdentityGroups(ctx context.Context, identityId 
 		return false, err
 	}
 
-	objUser, err := s.jimm.FetchIdentity(ctx, identityId)
+	objUser, err := s.jimm.IdentityManager.FetchIdentity(ctx, identityId)
 	if err != nil {
 		return false, v1.NewNotFoundError(fmt.Sprintf("User with id %s not found", identityId))
 	}
@@ -209,7 +209,7 @@ func (s *identitiesService) GetIdentityEntitlements(ctx context.Context, identit
 	if err != nil {
 		return nil, err
 	}
-	objUser, err := s.jimm.FetchIdentity(ctx, identityId)
+	objUser, err := s.jimm.IdentityManager.FetchIdentity(ctx, identityId)
 	if err != nil {
 		if errors.ErrorCode(err) == errors.CodeNotFound {
 			return nil, v1.NewNotFoundError(fmt.Sprintf("User with id %s not found", identityId))
@@ -246,7 +246,7 @@ func (s *identitiesService) PatchIdentityEntitlements(ctx context.Context, ident
 	if err != nil {
 		return false, err
 	}
-	objUser, err := s.jimm.FetchIdentity(ctx, identityId)
+	objUser, err := s.jimm.IdentityManager.FetchIdentity(ctx, identityId)
 	if err != nil {
 		return false, v1.NewNotFoundError(fmt.Sprintf("User with id %s not found", identityId))
 	}

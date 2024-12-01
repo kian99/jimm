@@ -98,6 +98,11 @@ type JIMM struct {
 
 	// PermissionManager provides a means to manage permissions within JIMM.
 	PermissionManager PermissionManager
+
+	// PermissionManager provides a means to handle login within JIMM.
+	LoginManager LoginManager
+
+	IdentityManager IdentityManager
 }
 
 // RoleManager provides a means to manage roles within JIMM.
@@ -149,6 +154,23 @@ type PermissionManager interface {
 	GrantAuditLogAccess(ctx context.Context, user *openfga.User, targetUserTag names.UserTag) error
 	RevokeAuditLogAccess(ctx context.Context, user *openfga.User, targetUserTag names.UserTag) error
 	GrantServiceAccountAccess(ctx context.Context, u *openfga.User, svcAccTag jimmnames.ServiceAccountTag, entities []string) error
+	OpenFGACleanup(ctx context.Context) error
+}
+
+type IdentityManager interface {
+	FetchIdentity(ctx context.Context, id string) (*openfga.User, error)
+	ListIdentities(ctx context.Context, user *openfga.User, pagination pagination.LimitOffsetPagination, match string) ([]openfga.User, error)
+	CountIdentities(ctx context.Context, user *openfga.User) (int, error)
+}
+
+type LoginManager interface {
+	AuthenticateBrowserSession(ctx context.Context, w http.ResponseWriter, req *http.Request) (context.Context, error)
+	LoginDevice(ctx context.Context) (*oauth2.DeviceAuthResponse, error)
+	GetDeviceSessionToken(ctx context.Context, deviceOAuthResponse *oauth2.DeviceAuthResponse) (string, error)
+	LoginClientCredentials(ctx context.Context, clientID string, clientSecret string) (*openfga.User, error)
+	LoginWithSessionToken(ctx context.Context, sessionToken string) (*openfga.User, error)
+	LoginWithSessionCookie(ctx context.Context, identityID string) (*openfga.User, error)
+	UserLogin(ctx context.Context, identityName string) (*openfga.User, error)
 }
 
 // ResourceTag returns JIMM's controller tag stating its UUID.
