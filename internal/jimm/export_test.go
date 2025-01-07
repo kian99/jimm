@@ -1,4 +1,4 @@
-// Copyright 2024 Canonical.
+// Copyright 2025 Canonical.
 
 package jimm
 
@@ -16,8 +16,6 @@ import (
 
 var (
 	DetermineAccessLevelAfterGrant = determineAccessLevelAfterGrant
-	PollDuration                   = pollDuration
-	CalculateNextPollDuration      = calculateNextPollDuration
 	NewControllerClient            = &newControllerClient
 	FillMigrationTarget            = fillMigrationTarget
 	InitiateMigration              = &initiateMigration
