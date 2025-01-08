@@ -177,7 +177,7 @@ func (s apiProxier) ServeWS(ctx context.Context, clientConn *websocket.Conn) {
 	jwtGenerator := jujuauth.New(s.jimm.Database, s.jimm, s.jimm.JWTService)
 	connectionFunc := controllerConnectionFunc(s, &jwtGenerator)
 	zapctx.Debug(ctx, "Starting proxier")
-	auditLogger := s.jimm.AddAuditLogEntry
+	auditLogger := s.jimm.AuditLogManager().AddAuditLogEntry
 	proxyHelpers := jimmRPC.ProxyHelpers{
 		ConnClient:              clientConn,
 		TokenGen:                &jwtGenerator,

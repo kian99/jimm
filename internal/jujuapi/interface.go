@@ -1,10 +1,9 @@
-// Copyright 2024 Canonical.
+// Copyright 2025 Canonical.
 
 package jujuapi
 
 import (
 	"context"
-	"time"
 
 	"github.com/go-macaroon-bakery/macaroon-bakery/v3/bakery"
 	"github.com/juju/juju/api/base"
@@ -26,14 +25,12 @@ type JIMM interface {
 	RelationService
 	ControllerService
 	ModelManager
-	AddAuditLogEntry(ale *dbmodel.AuditLogEntry)
 	AddCloudToController(ctx context.Context, user *openfga.User, controllerName string, tag names.CloudTag, cloud jujuparams.Cloud, force bool) error
 	AddHostedCloud(ctx context.Context, user *openfga.User, tag names.CloudTag, cloud jujuparams.Cloud, force bool) error
 	AddServiceAccount(ctx context.Context, u *openfga.User, clientId string) error
 	CopyServiceAccountCredential(ctx context.Context, u *openfga.User, svcAcc *openfga.User, cloudCredentialTag names.CloudCredentialTag) (names.CloudCredentialTag, []jujuparams.UpdateCredentialModelResult, error)
 	DestroyOffer(ctx context.Context, user *openfga.User, offerURL string, force bool) error
 	FindApplicationOffers(ctx context.Context, user *openfga.User, filters ...jujuparams.OfferFilter) ([]jujuparams.ApplicationOfferAdminDetailsV5, error)
-	FindAuditEvents(ctx context.Context, user *openfga.User, filter db.AuditLogFilter) ([]dbmodel.AuditLogEntry, error)
 	ForEachCloud(ctx context.Context, user *openfga.User, f func(*dbmodel.Cloud) error) error
 	ForEachUserCloud(ctx context.Context, user *openfga.User, f func(*dbmodel.Cloud) error) error
 	ForEachUserCloudCredential(ctx context.Context, u *dbmodel.Identity, ct names.CloudTag, f func(cred *dbmodel.CloudCredential) error) error
@@ -46,6 +43,7 @@ type JIMM interface {
 	GroupManager() jimm.GroupManager
 	IdentityManager() jimm.IdentityManager
 	LoginManager() jimm.LoginManager
+	AuditLogManager() jimm.AuditLogManager
 	GetJimmControllerAccess(ctx context.Context, user *openfga.User, tag names.UserTag) (string, error)
 	GetUserCloudAccess(ctx context.Context, user *openfga.User, cloud names.CloudTag) (string, error)
 	GetUserControllerAccess(ctx context.Context, user *openfga.User, controller names.ControllerTag) (string, error)
@@ -62,7 +60,6 @@ type JIMM interface {
 	ListResources(ctx context.Context, user *openfga.User, filter pagination.LimitOffsetPagination, namePrefixFilter, typeFilter string) ([]db.Resource, error)
 	Offer(ctx context.Context, user *openfga.User, offer jimm.AddApplicationOfferParams) error
 	PubSubHub() *pubsub.Hub
-	PurgeLogs(ctx context.Context, user *openfga.User, before time.Time) (int64, error)
 	RemoveCloud(ctx context.Context, u *openfga.User, ct names.CloudTag) error
 	RemoveCloudFromController(ctx context.Context, u *openfga.User, controllerName string, ct names.CloudTag) error
 	RemoveController(ctx context.Context, user *openfga.User, controllerName string, force bool) error

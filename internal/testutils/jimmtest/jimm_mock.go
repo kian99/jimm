@@ -64,6 +64,7 @@ type JIMM struct {
 	GroupManager_                      func() jimm.GroupManager
 	IdentityManager_                   func() jimm.IdentityManager
 	LoginManager_                      func() jimm.LoginManager
+	AuditLogManager_                   func() jimm.AuditLogManager
 	InitiateInternalMigration_         func(ctx context.Context, user *openfga.User, modelNameOrUUID string, targetController string) (jujuparams.InitiateMigrationResult, error)
 	InitiateMigration_                 func(ctx context.Context, user *openfga.User, spec jujuparams.MigrationSpec) (jujuparams.InitiateMigrationResult, error)
 	ListApplicationOffers_             func(ctx context.Context, user *openfga.User, filters ...jujuparams.OfferFilter) ([]jujuparams.ApplicationOfferAdminDetailsV5, error)
@@ -235,6 +236,13 @@ func (j *JIMM) LoginManager() jimm.LoginManager {
 		return nil
 	}
 	return j.LoginManager_()
+}
+
+func (j *JIMM) AuditLogManager() jimm.AuditLogManager {
+	if j.AuditLogManager_ == nil {
+		return nil
+	}
+	return j.AuditLogManager_()
 }
 
 func (j *JIMM) GetJimmControllerAccess(ctx context.Context, user *openfga.User, tag names.UserTag) (string, error) {
