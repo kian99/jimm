@@ -24,5 +24,5 @@ if [ "${SKIP_BOOTSTRAP:-false}" == true ]; then
 fi
 
 echo "Bootstrapping controller"
-juju bootstrap lxd "${CONTROLLER_NAME}" --config "${CLOUDINIT_FILE}" --config login-token-refresh-url=https://jimm.localhost/.well-known/jwks.json
+juju bootstrap lxd "${CONTROLLER_NAME}" --config "${CLOUDINIT_FILE}" --config login-token-refresh-url=https://jimm.localhost/foo/.well-known/jwks.json
 rm "$CLOUDINIT_FILE"

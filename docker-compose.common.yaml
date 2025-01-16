@@ -59,6 +59,8 @@ services:
         condition: service_healthy
     labels:
       traefik.enable: true
-      traefik.http.routers.jimm.rule: Host(`jimm.localhost`)
+      traefik.http.routers.jimm.rule: Host(`jimm.localhost`) && PathPrefix(`/foo`)
       traefik.http.routers.jimm.entrypoints: websecure
       traefik.http.routers.jimm.tls: true
+      traefik.http.middlewares.jimm-strip-prefix.stripprefix.prefixes: /foo
+      traefik.http.routers.jimm.middlewares: jimm-strip-prefix
