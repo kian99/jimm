@@ -212,7 +212,7 @@ func (c Connection) ControllerModelSummary(ctx context.Context, ms *jujuparams.M
 
 // ListModelSummaries retrieves the list of model summaries from the controler
 func (c Connection) ListModelSummaries(ctx context.Context, ms jujuparams.ModelSummariesRequest) (jujuparams.ModelSummaryResults, error) {
-	const op = errors.Op("jujuclient.ControllerModelSummary")
+	const op = errors.Op("jujuclient.ListModelSummaries")
 	args := jujuparams.ModelSummariesRequest{
 		UserTag: c.user.ResourceTag().String(),
 		All:     ms.All,

@@ -61,6 +61,10 @@ type API interface {
 	// controller that hosts the controller machines.
 	ControllerModelSummary(context.Context, *jujuparams.ModelSummary) error
 
+	// ControllerHostKey returns the public host key for the controller.
+	// The string argument should the controller model's UUID.
+	ControllerHostKey(context.Context) ([]byte, error)
+
 	// CreateModel creates a new model.
 	CreateModel(context.Context, *jujuparams.ModelCreateArgs, *jujuparams.ModelInfo) error
 

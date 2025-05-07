@@ -16,6 +16,7 @@ import (
 	"github.com/juju/zaputil"
 	"github.com/juju/zaputil/zapctx"
 	"go.uber.org/zap"
+	gossh "golang.org/x/crypto/ssh"
 	"gopkg.in/macaroon.v2"
 
 	"github.com/canonical/jimm/v3/internal/db"
@@ -234,6 +235,21 @@ func (j *JujuManager) AddController(ctx context.Context, user *openfga.User, ctl
 	modelSummary, err := getControllerModelSummary(ctx, api)
 	if err != nil {
 		return errors.E(op, err, "failed to get model summary")
+	}
+
+	// TODO: Add a way to fetch the controller's public host key
+	// either via a facade method or via controller config.
+	//
+	// The ControllerHostKey API was only added in Juju 3.6.X so if
+	// it is not available we will not set the SSHHostKey.
+	controllerHostKey, _ := api.ControllerHostKey(ctx)
+	if controllerHostKey != nil {
+		// Validate that we can parse the public key.
+		_, err := gossh.ParsePublicKey(controllerHostKey)
+		if err != nil {
+			return errors.E(op, err, "failed to parse the controller host key")
+		}
+		ctl.SSHHostKey = controllerHostKey
 	}
 
 	cloudName, err := getCloudNameFromModelSummary(modelSummary)

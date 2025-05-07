@@ -130,6 +130,7 @@ type API struct {
 	CloudInfo_                         func(context.Context, names.CloudTag, *jujuparams.CloudInfo) error
 	Clouds_                            func(context.Context) (map[names.CloudTag]jujuparams.Cloud, error)
 	ControllerModelSummary_            func(context.Context, *jujuparams.ModelSummary) error
+	ControllerHostKey_                 func(context.Context) ([]byte, error)
 	CreateModel_                       func(context.Context, *jujuparams.ModelCreateArgs, *jujuparams.ModelInfo) error
 	DestroyApplicationOffer_           func(context.Context, string, bool) error
 	DestroyModel_                      func(context.Context, names.ModelTag, *bool, *bool, *time.Duration, *time.Duration) error
@@ -216,6 +217,13 @@ func (a *API) ControllerModelSummary(ctx context.Context, ms *jujuparams.ModelSu
 		return errors.E(errors.CodeNotImplemented)
 	}
 	return a.ControllerModelSummary_(ctx, ms)
+}
+
+func (a *API) ControllerHostKey(ctx context.Context) ([]byte, error) {
+	if a.ControllerHostKey_ == nil {
+		return nil, errors.E(errors.CodeNotImplemented)
+	}
+	return a.ControllerHostKey_(ctx)
 }
 
 func (a *API) CreateModel(ctx context.Context, args *jujuparams.ModelCreateArgs, mi *jujuparams.ModelInfo) error {

@@ -22,12 +22,15 @@ import (
 // jujuSSHDefaultPort is the default port we expect the juju controllers to respond on.
 const jujuSSHDefaultPort = 17022
 
-// ControllerInfo is the struct holding the infomation to contact a controller
-type ControllerInfo struct {
-	// addresses to dial the controller
+// DialInfo holds information for dialing and
+// authenticating to a controller via SSH.
+type DialInfo struct {
+	// Addresses to dial the controller
 	Addresses []string
 	// JWT to authenticate to the controller
 	JWT string
+	// ControllerHostKey is the public host key of the controller
+	ControllerHostKey gossh.PublicKey
 }
 
 // IdentityManager provides a means to fetch an identity from the identity service.
@@ -97,32 +100,39 @@ func (s *sshManager) PublicKeyHandler(ctx context.Context, claimUser string, key
 
 // ControllerInfoFromModelUUID is the method to resolve the address of the controller to contact given the model UUID and
 // a valid JWT To connect to the controller.
-func (s *sshManager) ControllerInfoFromModelUUID(ctx context.Context, modelUUID string, user *openfga.User) (ControllerInfo, error) {
+func (s *sshManager) ControllerInfoFromModelUUID(ctx context.Context, modelUUID string, user *openfga.User) (DialInfo, error) {
 	zapctx.Info(ctx, "ControllerInfoFromModelUUID")
 	model, err := s.modelManager.GetModel(ctx, modelUUID)
 	if err != nil {
-		return ControllerInfo{}, errors.E(err, "cannot find model")
+		return DialInfo{}, errors.E(err, "cannot find model")
 	}
 	addrs, _ := rpc.GetAddressesAndTLSConfig(ctx, &model.Controller)
 	if len(addrs) == 0 {
-		return ControllerInfo{}, errors.E(err, "cannot find addresses for model's controller")
+		return DialInfo{}, errors.E(err, "cannot find addresses for model's controller")
 	}
+
 	jwtGenerator := s.jwtFactory.New()
 	jwtGenerator.SetTags(model.ResourceTag(), model.Controller.ResourceTag())
 	jwt, err := jwtGenerator.MakeLoginToken(ctx, user)
 	if err != nil {
-		return ControllerInfo{}, errors.E(err, "cannot generate jwt")
+		return DialInfo{}, errors.E(err, "cannot generate jwt")
 	}
 
-	return ControllerInfo{
-		Addresses: addrs,
-		JWT:       string(jwt),
+	hostKey, err := gossh.ParsePublicKey(model.Controller.SSHHostKey)
+	if err != nil {
+		return DialInfo{}, errors.E(err, "cannot parse host key")
+	}
+
+	return DialInfo{
+		Addresses:         addrs,
+		JWT:               string(jwt),
+		ControllerHostKey: hostKey,
 	}, nil
 }
 
 // DialControllerSSHServer dials the controller and returns
 // an SSH connection.
-func (s *sshManager) DialControllerSSHServer(ctx context.Context, ctrlInfo ControllerInfo, user *openfga.User) (*gossh.Client, error) {
+func (s *sshManager) DialControllerSSHServer(ctx context.Context, dialInfo DialInfo, user *openfga.User) (*gossh.Client, error) {
 	// TODO: Dial the controller and request it's SSH port
 	// here or save it when we add a controller to JIMM.
 	destPort := jujuSSHDefaultPort
@@ -130,15 +140,14 @@ func (s *sshManager) DialControllerSSHServer(ctx context.Context, ctrlInfo Contr
 	var err error
 	var errs []error
 
-	for _, addr := range ctrlInfo.Addresses {
+	for _, addr := range dialInfo.Addresses {
 		dest := net.JoinHostPort(addr, fmt.Sprint(destPort))
 		client, err = gossh.Dial("tcp", dest, &gossh.ClientConfig{
-			User: "jimm",
-			//nolint:gosec // this will be removed once we handle hostkeys
-			HostKeyCallback: gossh.InsecureIgnoreHostKey(),
+			User:            "jimm",
+			HostKeyCallback: gossh.FixedHostKey(dialInfo.ControllerHostKey),
 			Auth: []gossh.AuthMethod{
 				gossh.PasswordCallback(func() (secret string, err error) {
-					return ctrlInfo.JWT, nil
+					return dialInfo.JWT, nil
 				}),
 			},
 			Timeout: 5 * time.Second,

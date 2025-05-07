@@ -198,10 +198,10 @@ type SSHManager interface {
 
 	// ControllerInfoFromModelUUID resolves the address of the controller to contact given the model UUID and
 	// a valid JWT To connect to the controller.
-	ControllerInfoFromModelUUID(ctx context.Context, modelUUID string, user *openfga.User) (ssh.ControllerInfo, error)
+	ControllerInfoFromModelUUID(ctx context.Context, modelUUID string, user *openfga.User) (ssh.DialInfo, error)
 
 	// DialControllerSSHServer dials the controller using the provided details.
-	DialControllerSSHServer(ctx context.Context, ctrlInfo ssh.ControllerInfo, user *openfga.User) (*gossh.Client, error)
+	DialControllerSSHServer(ctx context.Context, ctrlInfo ssh.DialInfo, user *openfga.User) (*gossh.Client, error)
 }
 
 // JujuManager is the interface to manage all Juju related operations.

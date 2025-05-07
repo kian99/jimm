@@ -77,6 +77,11 @@ type Controller struct {
 	// Models contains all the models that are running on this controller.
 	Models []Model
 
+	// SSHHostKey is the public host key for the controller. This is
+	// used to verify the identity of the controller when connecting
+	// to it over SSH.
+	SSHHostKey []byte `gorm:"column:ssh_host_key"`
+
 	// TODO(mhilton) Save controller statistics?
 }
 
