@@ -22,14 +22,14 @@ import (
 	"github.com/canonical/jimm/v3/internal/errors"
 )
 
-// A Dialer is used to create client connections to an RPC URL.
-type Dialer struct {
+// A dialer is used to create client connections to an RPC URL.
+type dialer struct {
 	// TLSConfig is used to configure TLS for the client connection.
 	TLSConfig *tls.Config
 }
 
 // Dial establishes a new client RPC connection to the given URL.
-func (d Dialer) Dial(ctx context.Context, url string, headers http.Header) (*Client, error) {
+func (d dialer) Dial(ctx context.Context, url string, headers http.Header) (*Client, error) {
 	conn, err := d.DialWebsocket(ctx, url, headers)
 	if err != nil {
 		return nil, err
@@ -38,7 +38,7 @@ func (d Dialer) Dial(ctx context.Context, url string, headers http.Header) (*Cli
 }
 
 // DialWebsocket dials a url and returns a websocket.
-func (d Dialer) DialWebsocket(ctx context.Context, url string, headers http.Header) (*websocket.Conn, error) {
+func (d dialer) DialWebsocket(ctx context.Context, url string, headers http.Header) (*websocket.Conn, error) {
 	const op = errors.Op("rpc.BasicDial")
 
 	dialer := websocket.Dialer{
@@ -94,7 +94,7 @@ func GetAddressesAndTLSConfig(ctx context.Context, ctl *dbmodel.Controller) ([]s
 // It accepts the endpoints to dial, normally /api or /commands.
 func Dial(ctx context.Context, ctl *dbmodel.Controller, modelTag names.ModelTag, finalPath string, headers http.Header) (*websocket.Conn, error) {
 	addrs, tlsConfig := GetAddressesAndTLSConfig(ctx, ctl)
-	dialer := Dialer{
+	dialer := dialer{
 		TLSConfig: tlsConfig,
 	}
 	var websocketUrls []string
@@ -142,7 +142,7 @@ func websocketURL(s string, mt names.ModelTag, finalPath string) string {
 
 // dialAll simultaneously dials all given urls and returns the first
 // connection.
-func dialAll(ctx context.Context, dialer *Dialer, urls []string, headers http.Header) (*websocket.Conn, error) {
+func dialAll(ctx context.Context, dialer *dialer, urls []string, headers http.Header) (*websocket.Conn, error) {
 	if len(urls) == 0 {
 		return nil, errors.E("no urls to dial")
 	}
@@ -154,7 +154,7 @@ func dialAll(ctx context.Context, dialer *Dialer, urls []string, headers http.He
 }
 
 // dialAllHelper simultaneously dials all given urls and returns the first successful websocket connection.
-func dialAllHelper(ctx context.Context, dialer *Dialer, urls []string, headers http.Header) (*websocket.Conn, error) {
+func dialAllHelper(ctx context.Context, dialer *dialer, urls []string, headers http.Header) (*websocket.Conn, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
