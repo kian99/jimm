@@ -8,7 +8,7 @@
 # that the new version of JIMM works with the Juju dashboard.
 # Our main integration tests are run for every PR so they are not
 # needed here, while the dashboard tests are slower and only
-# run periodically and on releases.
+# run periodically and on releases. dummy-change
 
 name: Release pre-checks
 
