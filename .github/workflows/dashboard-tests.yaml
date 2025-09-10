@@ -12,7 +12,7 @@ on:
 jobs:
   test-dashboard:
     name: Test JIMM with the Juju dashboard
-    runs-on: [self-hosted-linux-amd64-jammy-large]
+    runs-on: ubuntu-22.04
     # Only run on workflow_call, workflow_dispatch, schedule, or when PR is labeled with 'test-dashboard'
     if: |
       github.event_name == 'workflow_call' ||
