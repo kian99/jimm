@@ -14,13 +14,20 @@ jobs:
     name: Test JIMM with the Juju dashboard
     runs-on: ubuntu-22.04
     # Only run on workflow_call, workflow_dispatch, schedule, or when PR is labeled with 'test-dashboard'
-    if: |
-      github.event_name == 'workflow_call' ||
-      github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'schedule' ||
-      contains(github.event.pull_request.labels.*.name, 'test-dashboard')
+    # if: |
+    #   github.event_name == 'workflow_call' ||
+    #   github.event_name == 'workflow_dispatch' ||
+    #   github.event_name == 'schedule' ||
+    #   contains(github.event.pull_request.labels.*.name, 'test-dashboard')
     
     steps:
+      - name: Dump event info for debugging
+        run: |
+          echo "GITHUB_EVENT_NAME=$GITHUB_EVENT_NAME"
+          echo "GITHUB_REF=$GITHUB_REF"
+          echo "GITHUB_EVENT_PATH=$GITHUB_EVENT_PATH"
+          jq . < "$GITHUB_EVENT_PATH"
+
       - name: Checkout JIMM repo
         uses: actions/checkout@v4
 
