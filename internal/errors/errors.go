@@ -16,9 +16,6 @@ import (
 
 // An Error is an error in the JIMM system.
 type Error struct {
-	// Op is the operation that errored.
-	Op Op
-
 	// Code is a code attached to the error.
 	Code Code
 
@@ -66,8 +63,6 @@ func (e *Error) ErrorInfo() map[string]any {
 // is constructed by processing the given arguments. The meaning of the
 // arguments is as follows:
 //
-//	errors.Op   - string representation of the operation being
-//	              performed.
 //	errors.Code - string code classifying the error.
 //	error       - underlying error that caused the new error.
 //	string      - A human readable message describing the error.
@@ -82,8 +77,6 @@ func E(args ...interface{}) error {
 	var e Error
 	for _, arg := range args {
 		switch v := arg.(type) {
-		case Op:
-			e.Op = v
 		case Code:
 			setCode = true
 			e.Code = v

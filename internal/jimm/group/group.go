@@ -36,39 +36,37 @@ func (j *groupManager) AddGroup(ctx context.Context, user *openfga.User, name st
 	const op = errors.Op("jimm.GetGroupManager().AddGroup")
 
 	if !user.JimmAdmin {
-		return nil, errors.E(op, errors.CodeUnauthorized, "unauthorized")
+		return nil, errors.E(errors.CodeUnauthorized, "unauthorized")
 	}
 
 	ge, err := j.store.AddGroup(ctx, name)
 	if err != nil {
-		return nil, errors.E(op, err)
+		return nil, errors.E(err)
 	}
 	return ge, nil
 }
 
 // CountGroups returns the number of groups that exist.
 func (j *groupManager) CountGroups(ctx context.Context, user *openfga.User) (int, error) {
-	const op = errors.Op("jimm.CountGroups")
 
 	if !user.JimmAdmin {
-		return 0, errors.E(op, errors.CodeUnauthorized, "unauthorized")
+		return 0, errors.E(errors.CodeUnauthorized, "unauthorized")
 	}
 	count, err := j.store.CountGroups(ctx)
 	if err != nil {
-		return 0, errors.E(op, err)
+		return 0, errors.E(err)
 	}
 	return count, nil
 }
 
 // getGroup returns a group based on the provided UUID or name.
 func (j *groupManager) getGroup(ctx context.Context, user *openfga.User, group *dbmodel.GroupEntry) (*dbmodel.GroupEntry, error) {
-	const op = errors.Op("jimm.getGroup")
 
 	if !user.JimmAdmin {
-		return nil, errors.E(op, errors.CodeUnauthorized, "unauthorized")
+		return nil, errors.E(errors.CodeUnauthorized, "unauthorized")
 	}
 	if err := j.store.GetGroup(ctx, group); err != nil {
-		return nil, errors.E(op, err)
+		return nil, errors.E(err)
 	}
 	return group, nil
 }
@@ -88,7 +86,7 @@ func (j *groupManager) RenameGroup(ctx context.Context, user *openfga.User, oldN
 	const op = errors.Op("jimm.GetGroupManager().RenameGroup")
 
 	if !user.JimmAdmin {
-		return errors.E(op, errors.CodeUnauthorized, "unauthorized")
+		return errors.E(errors.CodeUnauthorized, "unauthorized")
 	}
 
 	group := &dbmodel.GroupEntry{
@@ -107,7 +105,7 @@ func (j *groupManager) RenameGroup(ctx context.Context, user *openfga.User, oldN
 		return nil
 	})
 	if err != nil {
-		return errors.E(op, err)
+		return errors.E(err)
 	}
 
 	return nil
@@ -118,7 +116,7 @@ func (j *groupManager) RemoveGroup(ctx context.Context, user *openfga.User, name
 	const op = errors.Op("jimm.GetGroupManager().RemoveGroup")
 
 	if !user.JimmAdmin {
-		return errors.E(op, errors.CodeUnauthorized, "unauthorized")
+		return errors.E(errors.CodeUnauthorized, "unauthorized")
 	}
 
 	group := &dbmodel.GroupEntry{
@@ -135,12 +133,12 @@ func (j *groupManager) RemoveGroup(ctx context.Context, user *openfga.User, name
 		return nil
 	})
 	if err != nil {
-		return errors.E(op, err)
+		return errors.E(err)
 	}
 
 	err = j.authSvc.RemoveGroup(ctx, group.ResourceTag())
 	if err != nil {
-		return errors.E(op, err)
+		return errors.E(err)
 	}
 	return nil
 }
@@ -151,12 +149,12 @@ func (j *groupManager) ListGroups(ctx context.Context, user *openfga.User, pagin
 	const op = errors.Op("jimm.GetGroupManager().ListGroups")
 
 	if !user.JimmAdmin {
-		return nil, errors.E(op, errors.CodeUnauthorized, "unauthorized")
+		return nil, errors.E(errors.CodeUnauthorized, "unauthorized")
 	}
 
 	groups, err := j.store.ListGroups(ctx, pagination.Limit(), pagination.Offset(), match)
 	if err != nil {
-		return nil, errors.E(op, err)
+		return nil, errors.E(err)
 	}
 	return groups, nil
 }
