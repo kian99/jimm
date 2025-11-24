@@ -5,11 +5,8 @@ package errors
 
 import (
 	stderr "errors"
-	"fmt"
 
 	jujuparams "github.com/juju/juju/rpc/params"
-	"github.com/juju/zaputil/zapctx"
-	"go.uber.org/zap"
 
 	apiparams "github.com/canonical/jimm/v3/pkg/api/params"
 )
@@ -31,7 +28,7 @@ type Error struct {
 }
 
 // Error implements the error interface.
-func (e *Error) Error() string {
+func (e Error) Error() string {
 	if e.Message != "" {
 		return e.Message
 	}
@@ -45,72 +42,50 @@ func (e *Error) Error() string {
 }
 
 // Unwrap implements the Unwrap method used by errors.Unwrap.
-func (e *Error) Unwrap() error {
+func (e Error) Unwrap() error {
 	return e.Err
 }
 
 // ErrorCode returns the value of this error's Code.
-func (e *Error) ErrorCode() string {
+func (e Error) ErrorCode() string {
 	return string(e.Code)
 }
 
 // ErrorInfo returns the value of this error's Info.
-func (e *Error) ErrorInfo() map[string]any {
+func (e Error) ErrorInfo() map[string]any {
 	return e.Info
 }
 
-// E constructs errors for use throughout the JIMM application. An error
-// is constructed by processing the given arguments. The meaning of the
-// arguments is as follows:
-//
-//	errors.Code - string code classifying the error.
-//	error       - underlying error that caused the new error.
-//	string      - A human readable message describing the error.
-//
-// E will panic if no arguments are provided.
-func E(args ...interface{}) error {
-	if len(args) == 0 {
-		panic("call to errors.E with no arguments")
-	}
-	var setCode bool
-	var setInfo bool
-	var e Error
-	for _, arg := range args {
-		switch v := arg.(type) {
-		case Code:
-			setCode = true
-			e.Code = v
-		case error:
-			e.Err = v
-		case string:
-			e.Message = v
-		case map[string]any:
-			setInfo = true
-			e.Info = v
-		default:
-			zapctx.Default.DPanic("unknown type passed to errors.E", zap.String("type", fmt.Sprintf("%T", arg)), zap.Any("value", arg))
-			return fmt.Errorf("unknown type (%T) passed to errors.E", arg)
-		}
-	}
-	if setCode {
-		return &e
-	}
+// E constructs errors for use throughout the JIMM application.
+// The initial construction of the error only accepts a string.
+// Modify the error further using the methods on the returned
+// object, including `Wrap`, `WithCode`, `WithInfo`, etc.
+func E(msg string) Error {
+	return Error{Message: msg}
+}
 
-	// If the caller didn't explicitly set the code/info for this error, attempt
-	// to copy the code/info from the wrapped error. The interface used to
-	// extract the details is compatible with both the Error type and juju
-	// API Error types.
-	if !setCode {
-		if ec, ok := e.Err.(interface{ ErrorCode() string }); ok {
-			e.Code = Code(ec.ErrorCode())
-		}
-	}
-	if !setInfo {
-		if ei, ok := e.Err.(interface{ ErrorInfo() map[string]any }); ok {
-			e.Info = ei.ErrorInfo()
-		}
-	}
-	return &e
+func Wrap(err error) Error {
+	return Error{Err: err}
+}
+
+func (e Error) Wrap(err error) Error {
+	e.Err = err
+	return e
+}
+
+func (e Error) WithCode(code Code) Error {
+	e.Code = code
+	return e
+}
+
+func (e Error) WithInfo(info map[string]any) Error {
+	e.Info = info
+	return e
+}
+
+func (e Error) WithMessage(msg string) Error {
+	e.Message = msg
+	return e
 }
 
 // A Code is a code which describes the class of error. Where possible
