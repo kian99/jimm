@@ -62,7 +62,7 @@ func init() {
 // DefaultCloud implements the DefaultCloud method of the Cloud facade.
 // It returns a default cloud if there is only one cloud available.
 func (r *controllerRoot) DefaultCloud(ctx context.Context) (jujuparams.StringResult, error) {
-	return jujuparams.StringResult{}, errors.E(errors.Op("jujuapi.DefaultCloud"), errors.CodeNotFound, "no default cloud")
+	return jujuparams.StringResult{}, errors.E(errors.CodeNotFound, "no default cloud")
 }
 
 // Cloud implements the Cloud method of the Cloud facade.

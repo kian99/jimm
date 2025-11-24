@@ -33,7 +33,7 @@ func NewGroupManager(store *db.Database, authSvc *openfga.OFGAClient) (*groupMan
 
 // AddGroup creates a group within JIMMs DB for reference by OpenFGA.
 func (j *groupManager) AddGroup(ctx context.Context, user *openfga.User, name string) (*dbmodel.GroupEntry, error) {
-	const op = errors.Op("jimm.GetGroupManager().AddGroup")
+	const op = "jimm.GetGroupManager().AddGroup"
 
 	if !user.JimmAdmin {
 		return nil, errors.E(errors.CodeUnauthorized, "unauthorized")
@@ -83,7 +83,7 @@ func (j *groupManager) GetGroupByName(ctx context.Context, user *openfga.User, n
 
 // RenameGroup renames a group in JIMM's DB.
 func (j *groupManager) RenameGroup(ctx context.Context, user *openfga.User, oldName, newName string) error {
-	const op = errors.Op("jimm.GetGroupManager().RenameGroup")
+	const op = "jimm.GetGroupManager().RenameGroup"
 
 	if !user.JimmAdmin {
 		return errors.E(errors.CodeUnauthorized, "unauthorized")
@@ -113,7 +113,7 @@ func (j *groupManager) RenameGroup(ctx context.Context, user *openfga.User, oldN
 
 // RemoveGroup removes a group within JIMMs DB for reference by OpenFGA.
 func (j *groupManager) RemoveGroup(ctx context.Context, user *openfga.User, name string) error {
-	const op = errors.Op("jimm.GetGroupManager().RemoveGroup")
+	const op = "jimm.GetGroupManager().RemoveGroup"
 
 	if !user.JimmAdmin {
 		return errors.E(errors.CodeUnauthorized, "unauthorized")
@@ -146,7 +146,7 @@ func (j *groupManager) RemoveGroup(ctx context.Context, user *openfga.User, name
 // ListGroups returns a list of groups known to JIMM.
 // `match` will filter the list fuzzy matching group's name or uuid.
 func (j *groupManager) ListGroups(ctx context.Context, user *openfga.User, pagination pagination.LimitOffsetPagination, match string) ([]dbmodel.GroupEntry, error) {
-	const op = errors.Op("jimm.GetGroupManager().ListGroups")
+	const op = "jimm.GetGroupManager().ListGroups"
 
 	if !user.JimmAdmin {
 		return nil, errors.E(errors.CodeUnauthorized, "unauthorized")

@@ -113,9 +113,6 @@ func E(args ...interface{}) error {
 	return &e
 }
 
-// An Op describes the operation being performed that caused the error.
-type Op string
-
 // A Code is a code which describes the class of error. Where possible
 // these codes are identical to the codes returned in the juju API.
 type Code string

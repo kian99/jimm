@@ -163,7 +163,7 @@ func (f *formatterParamsRetriever) GetParams(ctx context.Context, model dbmodel.
 func (f *formatterParamsRetriever) dialModel(ctx context.Context) error {
 	modelTag, ok := f.model.Tag().(names.ModelTag)
 	if !ok {
-		return errors.E(errors.Op("failed to parse model tag"))
+		return errors.E("failed to parse model tag")
 	}
 	api, err := f.jujuManager.dial(ctx, &f.model.Controller, modelTag, nil)
 	if err != nil {

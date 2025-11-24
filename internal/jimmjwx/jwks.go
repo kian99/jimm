@@ -146,7 +146,7 @@ func (jwks *JWKSService) StartJWKSRotator(ctx context.Context, checkRotateRequir
 			select {
 			case <-checkRotateRequired:
 				if err := rotateJWKS(ctx, credStore, initialRotateRequiredTime); err != nil {
-					zapctx.Error(ctx, "security failure", zap.Any("op", op), zap.NamedError("jwks-error", err))
+					zapctx.Error(ctx, "security failure", zap.NamedError("jwks-error", err))
 				}
 			case <-ctx.Done():
 				zapctx.Debug(ctx, "shutdown for JWKS rotator complete.")

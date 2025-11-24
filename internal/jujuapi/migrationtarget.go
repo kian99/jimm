@@ -216,7 +216,7 @@ func (r *controllerRoot) Activate(ctx context.Context, args params.ActivateModel
 		},
 		args.CrossModelUUIDs)
 	if err != nil {
-		return errors.E(errors.Op("jujuapi.Activate"), err)
+		return errors.E(err)
 	}
 	return nil
 }
