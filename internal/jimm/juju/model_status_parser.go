@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	stderrors "errors"
-	"fmt"
 
 	"github.com/itchyny/gojq"
 	jujucmd "github.com/juju/cmd/v3"

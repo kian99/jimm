@@ -5,8 +5,6 @@
 package names
 
 import (
-	"fmt"
-
 	cofga "github.com/canonical/ofga"
 	"github.com/juju/juju/core/permission"
 	"github.com/juju/names/v5"

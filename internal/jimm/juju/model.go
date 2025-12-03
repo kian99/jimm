@@ -542,7 +542,7 @@ func (j *JujuManager) deleteModel(ctx context.Context, mt names.ModelTag) error 
 // returned unmodified and iteration will stop immediately. The given
 // function should not update the database.
 func (j *JujuManager) ForEachUserModel(ctx context.Context, user *openfga.User, f func(*dbmodel.Model, jujuparams.UserAccessPermission) error) error {
-	errStop := errors.New("stop")
+	errStop := fmt.Errorf("stop")
 	var iterErr error
 	err := j.Database.ForEachModel(ctx, func(m *dbmodel.Model) error {
 		model := *m
@@ -582,7 +582,7 @@ func (j *JujuManager) ForEachModel(ctx context.Context, user *openfga.User, f fu
 		return errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 
-	errStop := errors.New("stop")
+	errStop := fmt.Errorf("stop")
 	var iterErr error
 	err := j.Database.ForEachModel(ctx, func(m *dbmodel.Model) error {
 		if err := f(m, jujuparams.UserAccessPermission("admin")); err != nil {

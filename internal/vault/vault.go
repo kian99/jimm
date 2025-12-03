@@ -7,7 +7,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	goerr "errors"
-	"fmt"
 	"net/http"
 	"path"
 	"sync"
@@ -255,7 +254,7 @@ func (s *VaultStore) GetJWKS(ctx context.Context) (_ jwk.Set, err error) {
 	if secret == nil || secret.Data == nil {
 		msg := "no JWKS exists yet."
 		zapctx.Debug(ctx, msg)
-		return nil, errors.Wrap(msg).WithCode(errors.CodeNotFound)
+		return nil, errors.New(msg).WithCode(errors.CodeNotFound)
 	}
 
 	jsonString, ok := secret.Data[jwksKey].(string)
@@ -292,7 +291,7 @@ func (s *VaultStore) GetJWKSPrivateKey(ctx context.Context) (_ []byte, err error
 	if secret == nil || secret.Data == nil {
 		msg := "no JWKS private key exists yet."
 		zapctx.Debug(ctx, msg)
-		return nil, errors.Wrap(msg).WithCode(errors.CodeNotFound)
+		return nil, errors.New(msg).WithCode(errors.CodeNotFound)
 	}
 
 	keyPemB64 := secret.Data[jwksPrivateKey].(string)
@@ -327,7 +326,7 @@ func (s *VaultStore) GetJWKSExpiry(ctx context.Context) (_ time.Time, err error)
 	if secret == nil || secret.Data == nil {
 		msg := "no JWKS expiry exists yet."
 		zapctx.Debug(ctx, msg)
-		return now, errors.Wrap(msg).WithCode(errors.CodeNotFound)
+		return now, errors.New(msg).WithCode(errors.CodeNotFound)
 	}
 
 	expiry, ok := secret.Data[jwksExpiryKey].(string)

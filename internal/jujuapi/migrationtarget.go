@@ -4,7 +4,6 @@ package jujuapi
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/juju/description/v9"

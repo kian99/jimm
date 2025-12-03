@@ -3,7 +3,6 @@
 package bootstrap
 
 import (
-	"fmt"
 	"strings"
 	"time"
 

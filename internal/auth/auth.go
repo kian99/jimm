@@ -390,7 +390,7 @@ func (as *AuthenticationService) NewMigrationToken(ctx context.Context, username
 func (as *AuthenticationService) VerifySessionToken(token string) (_ jwt.Token, err error) {
 
 	errorFn := func(message string) error {
-		return errors.Wrap(message).WithCode(errors.CodeSessionTokenInvalid)
+		return errors.New(message).WithCode(errors.CodeSessionTokenInvalid)
 	}
 	defer func() {
 		if err != nil {

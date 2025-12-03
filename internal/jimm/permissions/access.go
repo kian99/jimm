@@ -4,7 +4,6 @@ package permissions
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/canonical/ofga"
 	jujuparams "github.com/juju/juju/rpc/params"

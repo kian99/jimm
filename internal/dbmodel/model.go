@@ -10,8 +10,6 @@ import (
 	jujuparams "github.com/juju/juju/rpc/params"
 	"github.com/juju/juju/state"
 	"github.com/juju/names/v5"
-
-	"github.com/canonical/jimm/v3/internal/errors"
 )
 
 // MigrationMode specifies where the Model is with respect to migration.

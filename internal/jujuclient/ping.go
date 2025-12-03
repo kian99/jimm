@@ -4,8 +4,6 @@ package jujuclient
 
 import (
 	"context"
-
-	"github.com/canonical/jimm/v3/internal/errors"
 )
 
 // Ping sends a ping message across the connection and waits for a

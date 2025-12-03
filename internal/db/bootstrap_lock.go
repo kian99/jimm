@@ -11,7 +11,6 @@ import (
 	"gorm.io/gorm/clause"
 
 	"github.com/canonical/jimm/v3/internal/dbmodel"
-	"github.com/canonical/jimm/v3/internal/errors"
 )
 
 // LockBootstrap acquires the bootstrap lock for controller bootstrap operations.

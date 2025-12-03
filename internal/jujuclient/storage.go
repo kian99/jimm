@@ -8,8 +8,6 @@ import (
 	jujuerrors "github.com/juju/errors"
 	jujuparams "github.com/juju/juju/rpc/params"
 	"github.com/juju/names/v5"
-
-	"github.com/canonical/jimm/v3/internal/errors"
 )
 
 // ListFilesystems lists filesystems for desired machines.

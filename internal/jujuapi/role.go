@@ -4,7 +4,6 @@ package jujuapi
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/canonical/jimm/v3/internal/common/pagination"

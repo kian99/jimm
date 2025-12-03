@@ -4,7 +4,6 @@ package jujuapi
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"time"
 

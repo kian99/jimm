@@ -4,7 +4,6 @@ package jujuapi
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/juju/names/v5"

@@ -5,7 +5,6 @@ package auditlog
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 

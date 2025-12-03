@@ -3,7 +3,6 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/juju/cmd/v3"

@@ -6,7 +6,6 @@ package upgrade
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/google/uuid"

@@ -3,6 +3,7 @@
 package jimmhttp
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -56,13 +57,13 @@ func (hph *HTTPProxyHandler) ProxyHTTP(w http.ResponseWriter, req *http.Request)
 	modelUUID := chi.URLParam(req, "uuid")
 	if modelUUID == "" {
 		msg := "cannot parse model UUID from path"
-		writeError(ctx, w, http.StatusBadRequest, msg, msg)
+		writeError(ctx, w, http.StatusBadRequest, fmt.Errorf(msg), msg)
 		return
 	}
 
 	if !names.IsValidModel(modelUUID) {
 		msg := "invalid model UUID format"
-		writeError(ctx, w, http.StatusBadRequest, msg, msg)
+		writeError(ctx, w, http.StatusBadRequest, fmt.Errorf(msg), msg)
 		return
 	}
 

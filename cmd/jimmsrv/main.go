@@ -171,7 +171,7 @@ func start(ctx context.Context, s *service.Service) error {
 	}
 	sshPortInt, err := strconv.Atoi(sshPort)
 	if err != nil {
-		return errors.Wrap(zap.Error(err).WithMessage("failed to parse ssh port"))
+		return errors.Wrap(err).WithMessage("failed to parse ssh port")
 	}
 	jimmUUID := os.Getenv("JIMM_UUID")
 	publicDnsName := os.Getenv("JIMM_DNS_NAME")

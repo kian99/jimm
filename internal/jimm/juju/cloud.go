@@ -4,7 +4,6 @@ package juju
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	jujucloud "github.com/juju/juju/cloud"
@@ -176,13 +175,13 @@ func (j *JujuManager) determineHostCloudRegion(ctx context.Context, hostCloudReg
 			Name: hostCloudRegion,
 		}
 		if err := j.Database.GetCloud(ctx, &cl); err != nil {
-			return nil, errors.Wrap(hostCloudRegion).WithMessage("unable to find host cloud %q").WithCode(errors.CodeNotFound)
+			return nil, errors.New("").WithMessagef("unable to find host cloud %q", hostCloudRegion).WithCode(errors.CodeNotFound)
 		}
 		if len(cl.Regions) > 1 {
-			return nil, errors.Wrap(hostCloudRegion).WithMessage("unable to determine a unique region for host cloud %q - consider specifying the host cloud region").WithCode(errors.CodeBadRequest)
+			return nil, errors.New("").WithMessagef("unable to determine a unique region for host cloud %q - consider specifying the host cloud region", hostCloudRegion).WithCode(errors.CodeBadRequest)
 		}
 		if len(cl.Regions) == 0 {
-			return nil, errors.Wrap(hostCloudRegion).WithMessage("the host cloud %q does not have a valid region").WithCode(errors.CodeBadRequest)
+			return nil, errors.New("").WithMessagef("the host cloud %q does not have a valid region", hostCloudRegion).WithCode(errors.CodeBadRequest)
 		}
 		return &cl.Regions[0], nil
 	}

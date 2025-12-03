@@ -5,7 +5,6 @@ package db
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/juju/names/v5"

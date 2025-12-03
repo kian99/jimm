@@ -4,7 +4,6 @@ package openfga
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/canonical/ofga"
 	"github.com/juju/juju/rpc/params"

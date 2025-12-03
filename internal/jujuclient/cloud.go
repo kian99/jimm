@@ -10,8 +10,6 @@ import (
 	jujucloud "github.com/juju/juju/cloud"
 	jujuparams "github.com/juju/juju/rpc/params"
 	"github.com/juju/names/v5"
-
-	"github.com/canonical/jimm/v3/internal/errors"
 )
 
 // CheckCredentialModels checks that the given credential would be

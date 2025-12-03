@@ -4,7 +4,6 @@ package jimmtest
 
 import (
 	"context"
-	"fmt"
 	"sync/atomic"
 	"time"
 

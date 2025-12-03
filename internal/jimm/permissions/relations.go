@@ -4,7 +4,6 @@ package permissions
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/juju/zaputil/zapctx"
 	"go.uber.org/zap"

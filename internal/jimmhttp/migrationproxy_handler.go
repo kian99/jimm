@@ -62,7 +62,7 @@ func (hph *MigrationHTTPProxyHandler) ProxyHTTP(w http.ResponseWriter, req *http
 	modelUUID := req.Header.Get(jujuparams.MigrationModelHTTPHeader)
 	if modelUUID == "" {
 		errMsg := fmt.Sprintf("missing %s header value", jujuparams.MigrationModelHTTPHeader)
-		writeError(ctx, w, http.StatusBadRequest, errMsg, errMsg)
+		writeError(ctx, w, http.StatusBadRequest, fmt.Errorf(errMsg), errMsg)
 		return
 	}
 

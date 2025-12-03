@@ -463,7 +463,7 @@ func (r *controllerRoot) CrossModelQuery(ctx context.Context, req apiparams.Cros
 
 	modelUUIDs, err := r.user.ListModels(ctx, ofganames.ReaderRelation)
 	if err != nil {
-		return apiparams.CrossModelQueryResponse{}, errors.Code("failed to list user's model access")
+		return apiparams.CrossModelQueryResponse{}, errors.New("failed to list user's model access")
 	}
 
 	switch strings.TrimSpace(strings.ToLower(req.Type)) {

@@ -4,7 +4,6 @@ package jujuapi
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/go-macaroon-bakery/macaroon-bakery/v3/bakery"
@@ -103,7 +102,7 @@ func (r *controllerRoot) getConsumeDetails(ctx context.Context, user *openfga.Us
 
 	ourl, err := crossmodel.ParseOfferURL(offerURL)
 	if err != nil {
-		return jujuparams.ConsumeOfferDetails{}, errors.New("cannot parse offer URL").WithCode(errors.CodeBadRequest, err)
+		return jujuparams.ConsumeOfferDetails{}, errors.Wrap(err).WithMessage("cannot parse offer URL").WithCode(errors.CodeBadRequest)
 	}
 
 	// Ensure the path is normalised.

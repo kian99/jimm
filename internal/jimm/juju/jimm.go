@@ -5,7 +5,6 @@ package juju
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"strings"
 
 	"github.com/google/uuid"

@@ -4,7 +4,6 @@ package juju
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/juju/juju/rpc/params"
 	"github.com/juju/zaputil/zapctx"

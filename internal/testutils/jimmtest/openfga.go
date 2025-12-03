@@ -17,7 +17,6 @@ import (
 	"github.com/openfga/language/pkg/go/transformer"
 	"gopkg.in/errgo.v1"
 
-	"github.com/canonical/jimm/v3/internal/errors"
 	"github.com/canonical/jimm/v3/internal/openfga"
 	auth_model "github.com/canonical/jimm/v3/openfga"
 )

@@ -5,7 +5,6 @@ package permissions
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"regexp"
 	"strings"
 
