@@ -5,6 +5,7 @@ package errors
 
 import (
 	stderr "errors"
+	"fmt"
 
 	jujuparams "github.com/juju/juju/rpc/params"
 
@@ -64,6 +65,17 @@ func E(msg string) Error {
 	return Error{Message: msg}
 }
 
+// New creates a new Error with the given message.
+func New(msg string) Error {
+	return Error{Message: msg}
+}
+
+// Newf creates a new Error using fmt.Errorf for formatting.
+// This allows the use of %w verb for error wrapping.
+func Newf(format string, args ...any) Error {
+	return Error{Err: fmt.Errorf(format, args...)}
+}
+
 func Wrap(err error) Error {
 	return Error{Err: err}
 }
@@ -85,6 +97,12 @@ func (e Error) WithInfo(info map[string]any) Error {
 
 func (e Error) WithMessage(msg string) Error {
 	e.Message = msg
+	return e
+}
+
+// WithMessagef sets a formatted message on the error.
+func (e Error) WithMessagef(format string, args ...any) Error {
+	e.Message = fmt.Sprintf(format, args...)
 	return e
 }
 

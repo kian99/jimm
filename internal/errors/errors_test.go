@@ -46,3 +46,46 @@ func TestErrorCodeWithJujuRPC(t *testing.T) {
 	c.Check(string(errors.ErrorCode(wrappedErr)), qt.Equals, "my-code")
 	c.Check(errors.ErrorInfo(wrappedErr), qt.DeepEquals, map[string]any{"key": "value"})
 }
+
+func TestNew(t *testing.T) {
+	c := qt.New(t)
+
+	err := errors.New("test error")
+	c.Check(err, qt.ErrorMatches, `test error`)
+	c.Check(err.Message, qt.Equals, "test error")
+}
+
+func TestNewf(t *testing.T) {
+	c := qt.New(t)
+
+	baseErr := fmt.Errorf("base error")
+	err := errors.Newf("wrapped error: %w", baseErr)
+	c.Check(err.Error(), qt.Matches, `wrapped error: base error`)
+	c.Check(err.Unwrap(), qt.ErrorMatches, `wrapped error: base error`)
+}
+
+func TestWithMessagef(t *testing.T) {
+	c := qt.New(t)
+
+	baseErr := fmt.Errorf("base error")
+	err := errors.Wrap(baseErr).WithMessagef("formatted: %s %d", "test", 42)
+	c.Check(err.Error(), qt.Equals, "formatted: test 42")
+	c.Check(err.Unwrap(), qt.Equals, baseErr)
+}
+
+func TestWrap(t *testing.T) {
+	c := qt.New(t)
+
+	baseErr := fmt.Errorf("base error")
+	err := errors.Wrap(baseErr)
+	c.Check(err.Error(), qt.Equals, "base error")
+	c.Check(err.Unwrap(), qt.Equals, baseErr)
+}
+
+func TestWithCode(t *testing.T) {
+	c := qt.New(t)
+
+	err := errors.New("test error").WithCode(errors.CodeNotFound)
+	c.Check(err.Error(), qt.Equals, "test error")
+	c.Check(errors.ErrorCode(err), qt.Equals, errors.CodeNotFound)
+}
