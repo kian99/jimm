@@ -14,7 +14,7 @@ import (
 func (d *Database) AddRole(ctx context.Context, name string) (re *dbmodel.RoleEntry, err error) {
 	const op = "db.AddRole"
 	if err := d.ready(); err != nil {
-		return nil, errors.E(err)
+		return nil, err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
@@ -27,7 +27,7 @@ func (d *Database) AddRole(ctx context.Context, name string) (re *dbmodel.RoleEn
 	}
 
 	if err := d.DB.WithContext(ctx).Create(re).Error; err != nil {
-		return nil, errors.E(dbError(err))
+		return nil, dbError(err)
 	}
 	return re, nil
 }
@@ -36,7 +36,7 @@ func (d *Database) AddRole(ctx context.Context, name string) (re *dbmodel.RoleEn
 func (d *Database) GetRole(ctx context.Context, role *dbmodel.RoleEntry) (err error) {
 	const op = "db.GetRole"
 	if err := d.ready(); err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
@@ -44,7 +44,7 @@ func (d *Database) GetRole(ctx context.Context, role *dbmodel.RoleEntry) (err er
 	defer servermon.ErrorCounter(servermon.DBQueryErrorCount, &err, op)
 
 	if role.UUID == "" && role.Name == "" {
-		return errors.E("must specify uuid or name")
+		return errors.New("must specify uuid or name")
 	}
 
 	db := d.DB.WithContext(ctx)
@@ -58,7 +58,7 @@ func (d *Database) GetRole(ctx context.Context, role *dbmodel.RoleEntry) (err er
 		db = db.Where("name = ?", role.Name)
 	}
 	if err := db.First(&role).Error; err != nil {
-		return errors.E(dbError(err))
+		return dbError(err)
 	}
 	return nil
 }
@@ -68,11 +68,11 @@ func (d *Database) UpdateRoleName(ctx context.Context, oldName, name string) (er
 	const op = "db.UpdateRole"
 
 	if oldName == "" {
-		return errors.E("name must be specified")
+		return errors.New("name must be specified")
 	}
 
 	if err := d.ready(); err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
@@ -82,7 +82,7 @@ func (d *Database) UpdateRoleName(ctx context.Context, oldName, name string) (er
 	model := d.DB.WithContext(ctx).Model(&dbmodel.RoleEntry{})
 	model.Where("name = ?", oldName)
 	if model.Update("name", name).RowsAffected == 0 {
-		return errors.E(errors.CodeNotFound, "role not found")
+		return errors.New("role not found").WithCode(errors.CodeNotFound)
 	}
 
 	return nil
@@ -93,11 +93,11 @@ func (d *Database) RemoveRole(ctx context.Context, role *dbmodel.RoleEntry) (err
 	const op = "db.RemoveRole"
 
 	if role.ID == 0 && role.UUID == "" {
-		return errors.E("neither role UUID or ID specified", errors.CodeNotFound)
+		return errors.New("neither role UUID or ID specified").WithCode(errors.CodeNotFound)
 	}
 
 	if err := d.ready(); err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
@@ -105,7 +105,7 @@ func (d *Database) RemoveRole(ctx context.Context, role *dbmodel.RoleEntry) (err
 	defer servermon.ErrorCounter(servermon.DBQueryErrorCount, &err, op)
 
 	if err := d.DB.WithContext(ctx).Delete(role).Error; err != nil {
-		return errors.E(dbError(err))
+		return dbError(err)
 	}
 	return nil
 }
@@ -115,7 +115,7 @@ func (d *Database) RemoveRole(ctx context.Context, role *dbmodel.RoleEntry) (err
 func (d *Database) ListRoles(ctx context.Context, limit, offset int, match string) (_ []dbmodel.RoleEntry, err error) {
 	const op = "db.ListRoles"
 	if err := d.ready(); err != nil {
-		return nil, errors.E(err)
+		return nil, err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
@@ -135,7 +135,7 @@ func (d *Database) ListRoles(ctx context.Context, limit, offset int, match strin
 	}
 	var Roles []dbmodel.RoleEntry
 	if err := db.Find(&Roles).Error; err != nil {
-		return nil, errors.E(dbError(err))
+		return nil, dbError(err)
 	}
 	return Roles, nil
 }
@@ -144,7 +144,7 @@ func (d *Database) ListRoles(ctx context.Context, limit, offset int, match strin
 func (d *Database) CountRoles(ctx context.Context) (count int, err error) {
 	const op = "db.CountRoles"
 	if err := d.ready(); err != nil {
-		return 0, errors.E(err)
+		return 0, err
 	}
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
 	defer durationObserver()
@@ -153,7 +153,7 @@ func (d *Database) CountRoles(ctx context.Context) (count int, err error) {
 	var c int64
 	var g dbmodel.RoleEntry
 	if err := d.DB.WithContext(ctx).Model(g).Count(&c).Error; err != nil {
-		return 0, errors.E(dbError(err))
+		return 0, dbError(err)
 	}
 	count = int(c)
 	return count, nil

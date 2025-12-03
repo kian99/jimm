@@ -353,21 +353,21 @@ func NewService(ctx context.Context, p Params) (*Service, error) {
 	if p.AuditLogRetentionPeriodInDays != "" {
 		retentionPeriod, err := strconv.Atoi(p.AuditLogRetentionPeriodInDays)
 		if err != nil {
-			return nil, errors.E("failed to parse audit log retention period")
+			return nil, errors.New("failed to parse audit log retention period")
 		}
 		if retentionPeriod < 0 {
-			return nil, errors.E("retention period cannot be less than 0")
+			return nil, errors.New("retention period cannot be less than 0")
 		}
 		jimmParameters.AuditLogRetentionDays = retentionPeriod
 	}
 
 	if p.DSN == "" {
-		return nil, errors.E("missing DSN")
+		return nil, errors.New("missing DSN")
 	}
 
 	database, err := openDB(ctx, p.DSN, p.LogSQL)
 	if err != nil {
-		return nil, errors.E(err)
+		return nil, err
 	}
 	db := &db.Database{
 		DB: database,
@@ -376,23 +376,23 @@ func NewService(ctx context.Context, p Params) (*Service, error) {
 
 	openFGAclient, err := newOpenFGAClient(ctx, p.OpenFGAParams)
 	if err != nil {
-		return nil, errors.E(err)
+		return nil, err
 	}
 	jimmParameters.OpenFGAClient = openFGAclient
 
 	if err := ensureControllerAdministrators(ctx, openFGAclient, p.ControllerUUID, p.ControllerAdmins); err != nil {
-		return nil, errors.E(err, "failed to ensure controller admins")
+		return nil, errors.Wrap(err).WithMessage("failed to ensure controller admins")
 	}
 
 	credentialStore, err := s.setupCredentialStore(ctx, p, db)
 	if err != nil {
-		return nil, errors.E(err)
+		return nil, err
 	}
 	jimmParameters.CredentialStore = credentialStore
 
 	sessionStore, err := s.setupSessionStore(ctx, p.CookieSessionKey, db)
 	if err != nil {
-		return nil, errors.E(err)
+		return nil, err
 	}
 	s.AddCleanup(func() error {
 		sessionStore.Close()
@@ -423,7 +423,7 @@ func NewService(ctx context.Context, p Params) (*Service, error) {
 	)
 	jimmParameters.OAuthAuthenticator = authSvc
 	if err != nil {
-		return nil, errors.E(fmt.Errorf("failed to setup authentication service: %w", err))
+		return nil, errors.Newf("failed to setup authentication service: %w", err)
 	}
 
 	if p.JWTExpiryDuration == 0 {
@@ -443,14 +443,14 @@ func NewService(ctx context.Context, p Params) (*Service, error) {
 	jimmParameters.MigrationTokenGenerator = authSvc
 
 	if _, err := url.Parse(p.DashboardFinalRedirectURL); err != nil {
-		return nil, errors.E(err, "failed to parse final redirect url for the dashboard")
+		return nil, errors.Wrap(err).WithMessage("failed to parse final redirect url for the dashboard")
 	}
 
 	jimmParameters.BootstrapLoginTokenRefreshURL = p.BootstrapLoginTokenRefreshURL
 
 	s.jimm, err = jimm.New(jimmParameters)
 	if err != nil {
-		return nil, errors.E(err)
+		return nil, err
 	}
 
 	s.mux = chi.NewRouter()
@@ -474,7 +474,7 @@ func NewService(ctx context.Context, p Params) (*Service, error) {
 
 	rebacBackend, err := rebac_admin.SetupBackend(ctx, s.jimm)
 	if err != nil {
-		return nil, errors.E(err)
+		return nil, err
 	}
 
 	s.mux.Mount("/rebac", middleware.AuthenticateRebac("/rebac", rebacBackend.Handler(""), s.jimm.LoginManager()))
@@ -502,7 +502,7 @@ func NewService(ctx context.Context, p Params) (*Service, error) {
 			DashboardFinalRedirectURL: p.DashboardFinalRedirectURL,
 		})
 		if err != nil {
-			return nil, errors.E(fmt.Errorf("failed to setup authentication handler: %w", err))
+			return nil, errors.Newf("failed to setup authentication handler: %w", err)
 		}
 		mountHandler(
 			jimmhttp.AuthResourceBasePath,
@@ -512,13 +512,13 @@ func NewService(ctx context.Context, p Params) (*Service, error) {
 
 	macaroonDischarger, err := s.setupDischarger(p)
 	if err != nil {
-		return nil, errors.E(fmt.Errorf("failed to set up discharger: %v", err))
+		return nil, errors.Newf("failed to set up discharger: %v", err)
 	}
 	s.mux.Handle(localDischargePath+"/*", discharger.GetDischargerMux(macaroonDischarger, localDischargePath))
 
 	publicDNS, err := parseURLWithOptionalScheme(p.PublicDNSName)
 	if err != nil {
-		return nil, errors.E(fmt.Errorf("failed to parse public DNS name: %v", err))
+		return nil, errors.Newf("failed to parse public DNS name: %v", err)
 	}
 	params := jujuapi.Params{
 		ControllerUUID: p.ControllerUUID,
@@ -619,7 +619,7 @@ func (s *Service) setupDischarger(p Params) (*discharger.MacaroonDischarger, err
 	}
 	MacaroonDischarger, err := discharger.NewMacaroonDischarger(cfg, s.jimm.Database, s.jimm.OfferAuthorizer())
 	if err != nil {
-		return nil, errors.E(err)
+		return nil, err
 	}
 	return MacaroonDischarger, nil
 }
@@ -628,12 +628,12 @@ func (s *Service) setupSessionStore(ctx context.Context, sessionSecret []byte, d
 
 	sqlDb, err := db.DB.DB()
 	if err != nil {
-		return nil, errors.E(err)
+		return nil, err
 	}
 
 	store, err := pgstore.NewPGStoreFromPool(sqlDb, sessionSecret)
 	if err != nil {
-		return nil, errors.E(fmt.Errorf("failed to create session store: %w", err))
+		return nil, errors.Newf("failed to create session store: %w", err)
 	}
 
 	// Cleanup expired session every 30 minutes
@@ -655,7 +655,7 @@ func openDB(ctx context.Context, dsn string, logSQL bool) (*gorm.DB, error) {
 	case strings.HasPrefix(dsn, "postgres:") || strings.HasPrefix(dsn, "postgresql:"):
 		dialect = postgres.Open(dsn)
 	default:
-		return nil, errors.E(errors.CodeServerConfiguration, "unsupported DSN")
+		return nil, errors.New("unsupported DSN").WithCode(errors.CodeServerConfiguration)
 	}
 	return gorm.Open(dialect, &gorm.Config{
 		Logger: &logger.GormLogger{LogSQL: logSQL},
@@ -676,13 +676,13 @@ func (s *Service) setupCredentialStore(ctx context.Context, p Params, db *db.Dat
 
 	vs, err := newVaultStore(ctx, p)
 	if err != nil {
-		return nil, errors.E(fmt.Errorf("vault store error: %v", err))
+		return nil, errors.Newf("vault store error: %v", err)
 	}
 	if vs != nil {
 		return vs, nil
 	}
 
-	return nil, errors.E("jimm cannot start without a credential store")
+	return nil, errors.New("jimm cannot start without a credential store")
 }
 
 func newVaultStore(ctx context.Context, p Params) (jimmcreds.CredentialStore, error) {
@@ -724,7 +724,7 @@ func newOpenFGAClient(ctx context.Context, p OpenFGAParams) (*openfga.OFGAClient
 		AuthModelID: p.AuthModel,
 	})
 	if err != nil {
-		return nil, errors.E(err)
+		return nil, err
 	}
 	return openfga.NewOpenFGAClient(cofgaClient), nil
 }
@@ -740,12 +740,12 @@ func ensureControllerAdministrators(ctx context.Context, client *openfga.OFGACli
 		userTag := names.NewUserTag(username)
 		i, err := dbmodel.NewIdentity(userTag.Id())
 		if err != nil {
-			return errors.E(err)
+			return err
 		}
 		user := openfga.NewUser(i, client)
 		isAdmin, err := openfga.IsAdministrator(ctx, user, controller)
 		if err != nil {
-			return errors.E(err)
+			return err
 		}
 		if !isAdmin {
 			tuples = append(tuples, openfga.Tuple{

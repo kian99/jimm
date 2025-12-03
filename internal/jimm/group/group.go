@@ -23,10 +23,10 @@ type groupManager struct {
 // creation, modification, and removal.
 func NewGroupManager(store *db.Database, authSvc *openfga.OFGAClient) (*groupManager, error) {
 	if store == nil {
-		return nil, errors.E("group store cannot be nil")
+		return nil, errors.New("group store cannot be nil")
 	}
 	if authSvc == nil {
-		return nil, errors.E("group authorisation service cannot be nil")
+		return nil, errors.New("group authorisation service cannot be nil")
 	}
 	return &groupManager{store, authSvc}, nil
 }
@@ -35,12 +35,12 @@ func NewGroupManager(store *db.Database, authSvc *openfga.OFGAClient) (*groupMan
 func (j *groupManager) AddGroup(ctx context.Context, user *openfga.User, name string) (*dbmodel.GroupEntry, error) {
 
 	if !user.JimmAdmin {
-		return nil, errors.E(errors.CodeUnauthorized, "unauthorized")
+		return nil, errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 
 	ge, err := j.store.AddGroup(ctx, name)
 	if err != nil {
-		return nil, errors.E(err)
+		return nil, err
 	}
 	return ge, nil
 }
@@ -49,11 +49,11 @@ func (j *groupManager) AddGroup(ctx context.Context, user *openfga.User, name st
 func (j *groupManager) CountGroups(ctx context.Context, user *openfga.User) (int, error) {
 
 	if !user.JimmAdmin {
-		return 0, errors.E(errors.CodeUnauthorized, "unauthorized")
+		return 0, errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 	count, err := j.store.CountGroups(ctx)
 	if err != nil {
-		return 0, errors.E(err)
+		return 0, err
 	}
 	return count, nil
 }
@@ -62,10 +62,10 @@ func (j *groupManager) CountGroups(ctx context.Context, user *openfga.User) (int
 func (j *groupManager) getGroup(ctx context.Context, user *openfga.User, group *dbmodel.GroupEntry) (*dbmodel.GroupEntry, error) {
 
 	if !user.JimmAdmin {
-		return nil, errors.E(errors.CodeUnauthorized, "unauthorized")
+		return nil, errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 	if err := j.store.GetGroup(ctx, group); err != nil {
-		return nil, errors.E(err)
+		return nil, err
 	}
 	return group, nil
 }
@@ -84,7 +84,7 @@ func (j *groupManager) GetGroupByName(ctx context.Context, user *openfga.User, n
 func (j *groupManager) RenameGroup(ctx context.Context, user *openfga.User, oldName, newName string) error {
 
 	if !user.JimmAdmin {
-		return errors.E(errors.CodeUnauthorized, "unauthorized")
+		return errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 
 	group := &dbmodel.GroupEntry{
@@ -103,7 +103,7 @@ func (j *groupManager) RenameGroup(ctx context.Context, user *openfga.User, oldN
 		return nil
 	})
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	return nil
@@ -113,7 +113,7 @@ func (j *groupManager) RenameGroup(ctx context.Context, user *openfga.User, oldN
 func (j *groupManager) RemoveGroup(ctx context.Context, user *openfga.User, name string) error {
 
 	if !user.JimmAdmin {
-		return errors.E(errors.CodeUnauthorized, "unauthorized")
+		return errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 
 	group := &dbmodel.GroupEntry{
@@ -130,12 +130,12 @@ func (j *groupManager) RemoveGroup(ctx context.Context, user *openfga.User, name
 		return nil
 	})
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	err = j.authSvc.RemoveGroup(ctx, group.ResourceTag())
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	return nil
 }
@@ -145,12 +145,12 @@ func (j *groupManager) RemoveGroup(ctx context.Context, user *openfga.User, name
 func (j *groupManager) ListGroups(ctx context.Context, user *openfga.User, pagination pagination.LimitOffsetPagination, match string) ([]dbmodel.GroupEntry, error) {
 
 	if !user.JimmAdmin {
-		return nil, errors.E(errors.CodeUnauthorized, "unauthorized")
+		return nil, errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 
 	groups, err := j.store.ListGroups(ctx, pagination.Limit(), pagination.Offset(), match)
 	if err != nil {
-		return nil, errors.E(err)
+		return nil, err
 	}
 	return groups, nil
 }

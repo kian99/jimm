@@ -128,16 +128,16 @@ func SetupTestOFGAClient(names ...string) (*openfga.OFGAClient, *cofga.Client, *
 func RemoveStore(ctx context.Context, name string) error {
 	conn, err := pgx.Connect(context.Background(), "postgresql://jimm:jimm@localhost/jimm")
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	defer conn.Close(ctx)
 	_, err = conn.Exec(ctx, fmt.Sprintf("DELETE FROM authorization_model WHERE store = (SELECT id FROM store WHERE name = '%s')", name))
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	_, err = conn.Exec(ctx, fmt.Sprintf("DELETE FROM store WHERE name = '%s';", name))
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	return nil
 }
@@ -147,7 +147,7 @@ func RemoveStore(ctx context.Context, name string) error {
 func CreateStore(ctx context.Context, name string, id string) error {
 	conn, err := pgx.Connect(context.Background(), "postgresql://jimm:jimm@localhost/jimm")
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	defer conn.Close(ctx)
 	_, err = conn.Exec(
@@ -160,7 +160,7 @@ func CreateStore(ctx context.Context, name string, id string) error {
 		),
 	)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	return nil
 }
@@ -169,7 +169,7 @@ func CreateStore(ctx context.Context, name string, id string) error {
 func TruncateOpenFgaTuples(ctx context.Context) error {
 	conn, err := pgx.Connect(context.Background(), "postgresql://jimm:jimm@localhost/jimm")
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	defer conn.Close(ctx)
 

@@ -73,17 +73,17 @@ func (r *controllerRoot) CACert() (jujuparams.BytesResult, error) {
 
 func (r *controllerRoot) CheckMachines(ctx context.Context, args jujuparams.ModelArgs) (jujuparams.ErrorResults, error) {
 	if !r.user.JimmAdmin {
-		return jujuparams.ErrorResults{}, errors.E(errors.CodeUnauthorized, "unauthorized")
+		return jujuparams.ErrorResults{}, errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 
 	modelTag, err := names.ParseModelTag(args.ModelTag)
 	if err != nil {
-		return jujuparams.ErrorResults{}, errors.E(err)
+		return jujuparams.ErrorResults{}, err
 	}
 
 	results, err := r.jimm.JujuManager().CheckMachines(ctx, r.user, modelTag.Id())
 	if err != nil {
-		return jujuparams.ErrorResults{}, errors.E(err)
+		return jujuparams.ErrorResults{}, err
 	}
 	var errorResults []jujuparams.ErrorResult
 	for _, result := range results {
@@ -100,12 +100,12 @@ func (r *controllerRoot) CheckMachines(ctx context.Context, args jujuparams.Mode
 // It is used by the source Juju controller to abort a model migration.
 func (r *controllerRoot) Abort(ctx context.Context, args jujuparams.ModelArgs) error {
 	if !r.user.JimmAdmin {
-		return errors.E(errors.CodeUnauthorized, "unauthorized")
+		return errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 
 	modelTag, err := names.ParseModelTag(args.ModelTag)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	return r.jimm.JujuManager().AbortMigration(ctx, r.user, modelTag.Id())
 }
@@ -117,12 +117,12 @@ func (r *controllerRoot) Abort(ctx context.Context, args jujuparams.ModelArgs) e
 // is destroyed after the model is migrated away.
 func (r *controllerRoot) AdoptResources(ctx context.Context, args jujuparams.AdoptResourcesArgs) error {
 	if !r.user.JimmAdmin {
-		return errors.E(errors.CodeUnauthorized, "unauthorized")
+		return errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 
 	modelTag, err := names.ParseModelTag(args.ModelTag)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	return r.jimm.JujuManager().AdoptResources(ctx, r.user, modelTag.Id(), args.SourceControllerVersion)
 }
@@ -132,17 +132,17 @@ func (r *controllerRoot) AdoptResources(ctx context.Context, args jujuparams.Ado
 // latest log record it has seen.
 func (r *controllerRoot) LatestLogTime(ctx context.Context, args jujuparams.ModelArgs) (time.Time, error) {
 	if !r.user.JimmAdmin {
-		return time.Time{}, errors.E(errors.CodeUnauthorized, "unauthorized")
+		return time.Time{}, errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 
 	modelTag, err := names.ParseModelTag(args.ModelTag)
 	if err != nil {
-		return time.Time{}, errors.E(err)
+		return time.Time{}, err
 	}
 
 	t, err := r.jimm.JujuManager().LatestLogTime(ctx, modelTag.Id())
 	if err != nil {
-		return time.Time{}, errors.E(err)
+		return time.Time{}, err
 	}
 	return t, nil
 }
@@ -151,17 +151,17 @@ func (r *controllerRoot) LatestLogTime(ctx context.Context, args jujuparams.Mode
 func (r *controllerRoot) Prechecks(ctx context.Context, args jujuparams.MigrationModelInfo) error {
 
 	if !r.user.JimmAdmin {
-		return errors.E(errors.CodeUnauthorized, "unauthorized")
+		return errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 
 	ownerTag, err := names.ParseUserTag(args.OwnerTag)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	modelDescription, err := description.Deserialize(args.ModelDescription)
 	if err != nil {
-		return errors.E(fmt.Errorf("failed to deserialize model description: %w", err))
+		return errors.Newf("failed to deserialize model description: %w", err)
 	}
 
 	model := migration.ModelInfo{
@@ -174,7 +174,7 @@ func (r *controllerRoot) Prechecks(ctx context.Context, args jujuparams.Migratio
 	}
 	err = r.jimm.JujuManager().Prechecks(ctx, r.user, model)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	return nil
 }
@@ -182,12 +182,12 @@ func (r *controllerRoot) Prechecks(ctx context.Context, args jujuparams.Migratio
 // Activate is the implementation of the Activate method of the MigrationTarget facade.
 func (r *controllerRoot) Activate(ctx context.Context, args jujuparams.ActivateModelArgs) error {
 	if !r.user.JimmAdmin {
-		return errors.E(errors.CodeUnauthorized, "unauthorized")
+		return errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 
 	modelTag, err := names.ParseModelTag(args.ModelTag)
 	if err != nil {
-		return errors.E(fmt.Errorf("invalid model tag: %w", err))
+		return errors.Newf("invalid model tag: %w", err)
 	}
 	// The controller tag is optional, so we parse it only if provided.
 	// It is only provided when args.CrossModelUUIDs is not empty.
@@ -196,7 +196,7 @@ func (r *controllerRoot) Activate(ctx context.Context, args jujuparams.ActivateM
 		controllerTag, err = names.ParseControllerTag(args.ControllerTag)
 		if err != nil {
 
-			return errors.E(fmt.Errorf("invalid controller tag: %w", err))
+			return errors.Newf("invalid controller tag: %w", err)
 		}
 	}
 
@@ -219,12 +219,12 @@ func (r *controllerRoot) Activate(ctx context.Context, args jujuparams.ActivateM
 // It imports resources into JIMM and proxies the import request to the target Juju controller.
 func (r *controllerRoot) Import(ctx context.Context, serialized jujuparams.SerializedModel) error {
 	if !r.user.JimmAdmin {
-		return errors.E(errors.CodeUnauthorized, "unauthorized")
+		return errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 
 	err := r.jimm.JujuManager().Import(ctx, r.user, serialized)
 	if err != nil {
-		return errors.E(fmt.Errorf("failed to import model: %w", err))
+		return errors.Newf("failed to import model: %w", err)
 	}
 	return nil
 }

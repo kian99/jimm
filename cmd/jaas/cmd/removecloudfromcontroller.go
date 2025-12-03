@@ -83,18 +83,18 @@ func (c *removeCloudFromControllerCommand) SetFlags(f *gnuflag.FlagSet) {
 // Init implements the cmd.Command interface.
 func (c *removeCloudFromControllerCommand) Init(args []string) error {
 	if len(args) < 2 {
-		return errors.E("missing arguments")
+		return errors.New("missing arguments")
 	}
 	if len(args) > 2 {
-		return errors.E("too many arguments")
+		return errors.New("too many arguments")
 	}
 	c.targetControllerName = args[0]
 	if ok := names.IsValidControllerName(c.targetControllerName); !ok {
-		return errors.E("invalid controller name %q", c.targetControllerName)
+		return errors.New("").WithMessagef("invalid controller name %q", c.targetControllerName)
 	}
 	c.cloudName = args[1]
 	if ok := names.IsValidCloud(c.cloudName); !ok {
-		return errors.E("invalid cloud name %q", c.cloudName)
+		return errors.New("").WithMessagef("invalid cloud name %q", c.cloudName)
 	}
 
 	return nil
@@ -104,7 +104,7 @@ func (c *removeCloudFromControllerCommand) Init(args []string) error {
 func (c *removeCloudFromControllerCommand) Run(ctxt *cmd.Context) error {
 	err := c.removeCloudFromController(ctxt)
 	if err != nil {
-		return errors.E(err, fmt.Sprintf("error removing cloud from controller: %v", err))
+		return errors.Wrap(err).WithMessagef("error removing cloud from controller: %v", err)
 	}
 
 	return nil
@@ -113,7 +113,7 @@ func (c *removeCloudFromControllerCommand) Run(ctxt *cmd.Context) error {
 func (c *removeCloudFromControllerCommand) removeCloudFromController(ctxt *cmd.Context) error {
 	client, err := c.removeCloudFromControllerAPIFunc()
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	params := &apiparams.RemoveCloudFromControllerRequest{
@@ -123,7 +123,7 @@ func (c *removeCloudFromControllerCommand) removeCloudFromController(ctxt *cmd.C
 
 	err = client.RemoveCloudFromController(params)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	ctxt.Infof("Cloud %q removed from controller %q.", c.cloudName, c.targetControllerName)
@@ -133,7 +133,7 @@ func (c *removeCloudFromControllerCommand) removeCloudFromController(ctxt *cmd.C
 func (c *removeCloudFromControllerCommand) cloudAPI() (removeCloudFromControllerAPI, error) {
 	currentController, err := c.store.CurrentController()
 	if err != nil {
-		return nil, errors.E(err, "could not determine the current controller")
+		return nil, errors.Wrap(err).WithMessage("could not determine the current controller")
 	}
 	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
 	if err != nil {

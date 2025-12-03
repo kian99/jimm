@@ -66,7 +66,7 @@ func (c *listControllersCommand) SetFlags(f *gnuflag.FlagSet) {
 func (c *listControllersCommand) Run(ctxt *cmd.Context) error {
 	currentController, err := c.store.CurrentController()
 	if err != nil {
-		return errors.E(err, "could not determine controller")
+		return errors.Wrap(err).WithMessage("could not determine controller")
 	}
 	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
 	if err != nil {
@@ -76,12 +76,12 @@ func (c *listControllersCommand) Run(ctxt *cmd.Context) error {
 	client := api.NewClient(apiCaller)
 	controllers, err := client.ListControllers()
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	err = c.out.Write(ctxt, controllers)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	return nil
 }

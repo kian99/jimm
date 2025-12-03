@@ -45,7 +45,7 @@ func (d Dialer) DialWebsocket(ctx context.Context, url string, headers http.Head
 	}
 	conn, resp, err := dialer.DialContext(ctx, url, headers)
 	if err != nil {
-		return nil, errors.E(fmt.Errorf("basic dial failed: %w", err))
+		return nil, errors.Newf("basic dial failed: %w", err)
 	}
 	defer resp.Body.Close()
 	return conn, nil
@@ -142,7 +142,7 @@ func websocketURL(s string, mt names.ModelTag, finalPath string) string {
 // connection.
 func dialAll(ctx context.Context, dialer *Dialer, urls []string, headers http.Header) (*websocket.Conn, error) {
 	if len(urls) == 0 {
-		return nil, errors.E("no urls to dial")
+		return nil, errors.New("no urls to dial")
 	}
 	conn, err := dialAllHelper(ctx, dialer, urls, headers)
 	if err != nil {

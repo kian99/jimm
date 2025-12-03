@@ -37,7 +37,7 @@ func (d *Database) LockBootstrap(ctx context.Context, ttl time.Duration) error {
 		return nil
 	})
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	return nil
 }
@@ -61,7 +61,7 @@ func (d *Database) UnlockBootstrap(ctx context.Context) error {
 		return nil
 	})
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	return nil
 }

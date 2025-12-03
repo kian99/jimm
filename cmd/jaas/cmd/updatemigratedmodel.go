@@ -59,17 +59,17 @@ func (c *updateMigratedModelCommand) Info() *cmd.Info {
 func (c *updateMigratedModelCommand) Init(args []string) error {
 	switch len(args) {
 	default:
-		return errors.E("too many args")
+		return errors.New("too many args")
 	case 0:
-		return errors.E("controller not specified")
+		return errors.New("controller not specified")
 	case 1:
-		return errors.E("model uuid not specified")
+		return errors.New("model uuid not specified")
 	case 2:
 	}
 
 	c.req.TargetController = args[0]
 	if !names.IsValidModel(args[1]) {
-		return errors.E("invalid model uuid")
+		return errors.New("invalid model uuid")
 	}
 	c.req.ModelTag = names.NewModelTag(args[1]).String()
 	return nil
@@ -79,7 +79,7 @@ func (c *updateMigratedModelCommand) Init(args []string) error {
 func (c *updateMigratedModelCommand) Run(ctxt *cmd.Context) error {
 	currentController, err := c.store.CurrentController()
 	if err != nil {
-		return errors.E(err, "could not determine controller")
+		return errors.Wrap(err).WithMessage("could not determine controller")
 	}
 
 	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
@@ -89,7 +89,7 @@ func (c *updateMigratedModelCommand) Run(ctxt *cmd.Context) error {
 
 	client := api.NewClient(apiCaller)
 	if err := client.UpdateMigratedModel(&c.req); err != nil {
-		return errors.E(err)
+		return err
 	}
 	return nil
 }

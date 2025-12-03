@@ -19,10 +19,7 @@ import (
 // unsupportedLogin returns an appropriate error for login attempts using
 // old version of the Admin facade.
 func unsupportedLogin() error {
-	return errors.E(
-		errors.CodeNotSupported,
-		"JIMM does not support login from old clients",
-	)
+	return errors.New("JIMM does not support login from old clients").WithCode(errors.CodeNotSupported)
 }
 
 // unsupportedLoginWithInfo is a version of unsupportedLogin that logs the
@@ -49,7 +46,7 @@ func (r *controllerRoot) LoginDevice(ctx context.Context) (params.LoginDeviceRes
 
 	deviceResponse, err := r.jimm.LoginManager().LoginDevice(ctx)
 	if err != nil {
-		return response, errors.E(err, errors.CodeUnauthorized)
+		return response, errors.Wrap(err).WithCode(errors.CodeUnauthorized)
 	}
 	// NOTE: As this is on the controller root struct, and a new controller root
 	// is created per WS, it is EXPECTED that the subsequent call to GetDeviceSessionToken
@@ -73,7 +70,7 @@ func (r *controllerRoot) GetDeviceSessionToken(ctx context.Context) (params.GetD
 
 	token, err := r.jimm.LoginManager().GetDeviceSessionToken(ctx, r.deviceOAuthResponse)
 	if err != nil {
-		return response, errors.E(err, errors.CodeUnauthorized)
+		return response, errors.Wrap(err).WithCode(errors.CodeUnauthorized)
 	}
 
 	response.SessionToken = token
@@ -90,7 +87,7 @@ func (r *controllerRoot) LoginWithSessionCookie(ctx context.Context) (jujuparams
 
 	user, err := r.jimm.LoginManager().LoginWithSessionCookie(ctx, r.identityId)
 	if err != nil {
-		return jujuparams.LoginResult{}, errors.E(err, errors.CodeUnauthorized)
+		return jujuparams.LoginResult{}, errors.Wrap(err).WithCode(errors.CodeUnauthorized)
 	}
 
 	r.mu.Lock()
@@ -100,7 +97,7 @@ func (r *controllerRoot) LoginWithSessionCookie(ctx context.Context) (jujuparams
 	// Get server version for LoginResult
 	srvVersion, err := r.jimm.JujuManager().EarliestControllerVersion(ctx)
 	if err != nil {
-		return jujuparams.LoginResult{}, errors.E(err)
+		return jujuparams.LoginResult{}, err
 	}
 
 	return jujuparams.LoginResult{
@@ -122,7 +119,7 @@ func (r *controllerRoot) LoginWithSessionToken(ctx context.Context, req params.L
 	user, err := r.jimm.LoginManager().LoginWithSessionToken(ctx, req.SessionToken)
 	if err != nil {
 		// Avoid masking the error code on err below. The Juju CLI uses it to determine when to initiate login see [OAuthAuthenticator.VerifySessionToken].
-		return jujuparams.LoginResult{}, errors.E(err)
+		return jujuparams.LoginResult{}, err
 	}
 
 	// TODO(ale8k): This isn't needed I don't think as controller roots are unique
@@ -134,7 +131,7 @@ func (r *controllerRoot) LoginWithSessionToken(ctx context.Context, req params.L
 	// Get server version for LoginResult
 	srvVersion, err := r.jimm.JujuManager().EarliestControllerVersion(ctx)
 	if err != nil {
-		return jujuparams.LoginResult{}, errors.E(err)
+		return jujuparams.LoginResult{}, err
 	}
 
 	return jujuparams.LoginResult{
@@ -152,7 +149,7 @@ func (r *controllerRoot) LoginWithClientCredentials(ctx context.Context, req par
 
 	user, err := r.jimm.LoginManager().LoginClientCredentials(ctx, req.ClientID, req.ClientSecret)
 	if err != nil {
-		return jujuparams.LoginResult{}, errors.E(err, errors.CodeUnauthorized)
+		return jujuparams.LoginResult{}, errors.Wrap(err).WithCode(errors.CodeUnauthorized)
 	}
 
 	r.mu.Lock()
@@ -162,7 +159,7 @@ func (r *controllerRoot) LoginWithClientCredentials(ctx context.Context, req par
 	// Get server version for LoginResult
 	srvVersion, err := r.jimm.JujuManager().EarliestControllerVersion(ctx)
 	if err != nil {
-		return jujuparams.LoginResult{}, errors.E(err)
+		return jujuparams.LoginResult{}, err
 	}
 
 	return jujuparams.LoginResult{

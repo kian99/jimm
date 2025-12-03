@@ -61,7 +61,7 @@ type Dialer struct {
 
 func (d *Dialer) createLoginRequest1(ctx context.Context, controllerTag names.ControllerTag, userTag names.UserTag, permissions map[string]string) (*jujuparams.LoginRequest, error) {
 	if len(permissions) == 0 {
-		return nil, errors.E("")
+		return nil, errors.New("")
 	}
 	jwt, err := d.JWTService.NewJWT(ctx, jimmjwx.JWTParams{
 		Controller: controllerTag.Id(),
@@ -69,7 +69,7 @@ func (d *Dialer) createLoginRequest1(ctx context.Context, controllerTag names.Co
 		Access:     permissions,
 	})
 	if err != nil {
-		return nil, errors.E(err)
+		return nil, err
 	}
 	jwtString := base64.StdEncoding.EncodeToString(jwt)
 
@@ -119,7 +119,7 @@ func (d *Dialer) Dial(ctx context.Context, ctl *dbmodel.Controller, modelTag nam
 		return nil, err
 	}
 	if conn == nil {
-		return nil, errors.E(errors.CodeConnectionFailed, err)
+		return nil, errors.Wrap(err).WithCode(errors.CodeConnectionFailed)
 	}
 	client := rpc.NewClient(conn)
 
@@ -131,20 +131,20 @@ func (d *Dialer) Dial(ctx context.Context, ctl *dbmodel.Controller, modelTag nam
 	if user.Name == adminUser {
 		loginRequest, err = d.createAdminLoginRequest(ctx, ctl, modelTag, withPermissions)
 		if err != nil {
-			return nil, errors.E(err)
+			return nil, err
 		}
 
 	} else {
 		loginRequest, err = d.createLoginRequest(ctx, ctl, modelTag, user, withPermissions)
 		if err != nil {
-			return nil, errors.E(err)
+			return nil, err
 		}
 	}
 
 	var res jujuparams.LoginResult
 	if err := client.Call(ctx, "Admin", 3, "", "Login", loginRequest, &res); err != nil {
 		client.Close()
-		return nil, errors.E(errors.CodeConnectionFailed, err)
+		return nil, errors.Wrap(err).WithCode(errors.CodeConnectionFailed)
 	}
 
 	ct, err := names.ParseControllerTag(res.ControllerTag)
@@ -291,7 +291,7 @@ func (c *Connection) CallHighestFacadeVersion(ctx context.Context, facade string
 			return c.Call(ctx, facade, version, id, method, args, resp)
 		}
 	}
-	return errors.E(fmt.Sprintf("facade %v version %v not supported", facade, versions))
+	return errors.New("").WithMessagef("facade %v version %v not supported", facade, versions)
 }
 
 // BestFacadeVersion returns the newest version of 'objType' that this
@@ -310,7 +310,7 @@ func (c *Connection) ModelTag() (names.ModelTag, bool) {
 // to make HTTP requests to the API. URLs passed to the client
 // will be made relative to the API host and the current model.
 func (c *Connection) HTTPClient() (*httprequest.Client, error) {
-	return nil, errors.E(errors.CodeNotImplemented)
+	return nil, errors.New("").WithCode(errors.CodeNotImplemented)
 }
 
 // BakeryClientWrapper wraps an httpbakery.Client to implement
@@ -350,22 +350,22 @@ func (c *Connection) ConnectStream(path string, attrs url.Values) (base.Stream, 
 
 	modelTag, ok := c.ModelTag()
 	if !ok {
-		return nil, errors.E("no model found")
+		return nil, errors.New("no model found")
 	}
 
 	user, pass, err := c.dialer.ControllerCredentialsStore.GetControllerCredentials(c.ctx, c.ctl.Name)
 	if err != nil {
-		return nil, errors.E(err)
+		return nil, err
 	}
 	ok = names.IsValidUser(user)
 	if !ok {
-		return nil, errors.E("invalid/missing controller credentials")
+		return nil, errors.New("invalid/missing controller credentials")
 	}
 	requestHeader := jujuhttp.BasicAuthHeader(names.NewUserTag(user).String(), pass)
 
 	conn, err := rpc.Dial(c.ctx, c.ctl, modelTag, path, requestHeader)
 	if err != nil {
-		return nil, errors.E(err)
+		return nil, err
 	}
 	return conn, nil
 }
@@ -379,7 +379,7 @@ func (c *Connection) ConnectControllerStream(path string, attrs url.Values, extr
 
 	user, pass, err := c.dialer.ControllerCredentialsStore.GetControllerCredentials(c.ctx, c.ctl.Name)
 	if err != nil {
-		return nil, errors.E(err)
+		return nil, err
 	}
 
 	header := jujuhttp.BasicAuthHeader(names.NewUserTag(user).String(), pass)
@@ -391,7 +391,7 @@ func (c *Connection) ConnectControllerStream(path string, attrs url.Values, extr
 
 	conn, err := rpc.Dial(c.ctx, c.ctl, names.ModelTag{}, path, header)
 	if err != nil {
-		return nil, errors.E(err)
+		return nil, err
 	}
 
 	return conn, nil

@@ -114,7 +114,7 @@ func TestWSHandlerNilServer(t *testing.T) {
 type authFailServer struct{ c jimmtest.SimpleTester }
 
 func (s authFailServer) Authenticate(ctx context.Context, w http.ResponseWriter, req *http.Request) (context.Context, error) {
-	return ctx, errors.E("authentication failed")
+	return ctx, errors.New("authentication failed")
 }
 
 func (s authFailServer) ServeWS(ctx context.Context, conn *websocket.Conn) {}

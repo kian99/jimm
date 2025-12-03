@@ -116,13 +116,13 @@ func TestModelCleanup(t *testing.T) {
 			ModelInfo_: func(ctx context.Context, mi *jujuparams.ModelInfo) error {
 				switch mi.UUID {
 				case s.env.Models[0].UUID:
-					return errors.E(errors.CodeNotFound)
+					return errors.New("").WithCode(errors.CodeNotFound)
 				case s.env.Models[1].UUID:
 					return nil
 				case s.env.Models[2].UUID:
 					return nil
 				default:
-					return errors.E("new error")
+					return errors.New("new error")
 				}
 			},
 			DestroyModel_: func(ctx context.Context, mt names.ModelTag, b1, b2 *bool, d1, d2 *time.Duration) error {
@@ -245,7 +245,7 @@ func TestPollModelsDyingControllerErrors(t *testing.T) {
 	s.jujuManager.Dialer = &jimmtest.Dialer{
 		API: &jimmtest.API{
 			ModelInfo_: func(ctx context.Context, mi *jujuparams.ModelInfo) error {
-				return errors.E("controller not available")
+				return errors.New("controller not available")
 			},
 			DestroyModel_: func(ctx context.Context, mt names.ModelTag, b1, b2 *bool, d1, d2 *time.Duration) error {
 				return nil

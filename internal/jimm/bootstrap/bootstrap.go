@@ -113,26 +113,26 @@ func NewBootstrapManager(
 	credentialStore CredentialStore,
 ) (*bootstrapManager, error) {
 	if store == nil {
-		return nil, errors.E("store cannot be nil")
+		return nil, errors.New("store cannot be nil")
 	}
 	if jobtracker == nil {
-		return nil, errors.E("job tracker cannot be nil")
+		return nil, errors.New("job tracker cannot be nil")
 	}
 	if jujuManager == nil {
-		return nil, errors.E("juju manager cannot be nil")
+		return nil, errors.New("juju manager cannot be nil")
 	}
 	if binaryStore == nil {
-		return nil, errors.E("binary store cannot be nil")
+		return nil, errors.New("binary store cannot be nil")
 	}
 	// validate the JWKs endpoint URL if provided.
 	if jimmWellknownJWKSEndpoint != "" {
 		// Scheme is not optional, so we aren't using ParseURLWithOptionalScheme here.
 		if _, err := url.Parse(jimmWellknownJWKSEndpoint); err != nil {
-			return nil, errors.E(err, "failed to parse bootstrap login token refresh URL")
+			return nil, errors.Wrap(err).WithMessage("failed to parse bootstrap login token refresh URL")
 		}
 	}
 	if credentialStore == nil {
-		return nil, errors.E("credential store cannot be nil")
+		return nil, errors.New("credential store cannot be nil")
 	}
 	return &bootstrapManager{
 		store:                     store,
@@ -151,12 +151,12 @@ func (b *bootstrapManager) GetJobInfo(ctx context.Context, _ *openfga.User, jobI
 
 	job, err := b.tracker.GetJob(ctx, jobId)
 	if err != nil {
-		return params.GetJobInfoResponse{}, errors.E("failed to get job info", err)
+		return params.GetJobInfoResponse{}, errors.Wrap(err).WithMessage("failed to get job info")
 	}
 
 	loggies, newOffset, err := b.store.QueryJobLog(ctx, jobId, offset)
 	if err != nil {
-		return params.GetJobInfoResponse{}, errors.E("failed to query job logs", err)
+		return params.GetJobInfoResponse{}, errors.Wrap(err).WithMessage("failed to query job logs")
 	}
 	return params.GetJobInfoResponse{
 		Status:    params.JobStatus(job.Status),
@@ -170,16 +170,16 @@ func (b *bootstrapManager) GetJobInfo(ctx context.Context, _ *openfga.User, jobI
 func (b *bootstrapManager) StopJob(ctx context.Context, user *openfga.User, jobId uuid.UUID) error {
 
 	if user == nil {
-		return errors.E("user cannot be nil")
+		return errors.New("user cannot be nil")
 	}
 
 	if jobId == uuid.Nil {
-		return errors.E("job ID cannot be nil")
+		return errors.New("job ID cannot be nil")
 	}
 
 	err := b.tracker.StopJob(ctx, jobId)
 	if err != nil {
-		return errors.E("failed to stop job", err)
+		return errors.Wrap(err).WithMessage("failed to stop job")
 	}
 
 	return nil
@@ -190,7 +190,7 @@ func (b *bootstrapManager) StopJob(ctx context.Context, user *openfga.User, jobI
 // It returns nil on successful completion.
 func (b *bootstrapManager) WaitForJobCompletion(ctx context.Context, jobId uuid.UUID, config WaitConfig) error {
 	if jobId == uuid.Nil {
-		return errors.E("job ID cannot be nil")
+		return errors.New("job ID cannot be nil")
 	}
 
 	pollingInterval := config.PollingInterval
@@ -210,24 +210,24 @@ func (b *bootstrapManager) WaitForJobCompletion(ctx context.Context, jobId uuid.
 	for {
 		select {
 		case <-timeout:
-			return errors.E("job completion wait timed out")
+			return errors.New("job completion wait timed out")
 		case <-ticker.C:
 			job, err := b.tracker.GetJob(ctx, jobId)
 			if err != nil {
-				return errors.E(fmt.Errorf("failed to get job info: %w", err))
+				return errors.Newf("failed to get job info: %w", err)
 			}
 			switch params.JobStatus(job.Status) {
 			case params.StatusSuccessful:
 				return nil
 			case params.StatusFailed:
-				return errors.E(fmt.Sprintf("bootstrap job failed: %s", job.Error))
+				return errors.New("").WithMessagef("bootstrap job failed: %s", job.Error)
 			case params.StatusRunning, params.StatusPending:
 				continue
 			default:
-				return errors.E(fmt.Sprintf("unexpected job status: %s", job.Status))
+				return errors.New("").WithMessagef("unexpected job status: %s", job.Status)
 			}
 		case <-ctx.Done():
-			return errors.E(ctx.Err())
+			return ctx.Err()
 		}
 	}
 }
@@ -236,16 +236,16 @@ func (b *bootstrapManager) WaitForJobCompletion(ctx context.Context, jobId uuid.
 func (b *bootstrapManager) StartBootstrapJob(ctx context.Context, user *openfga.User, params BootstrapParams) (string, error) {
 
 	if b.jimmWellknownJWKSEndpoint == "" {
-		return "", errors.E("bootstrap login token refresh URL is not configured. Cannot proceed with bootstrap. Please configure it and try again.")
+		return "", errors.New("bootstrap login token refresh URL is not configured. Cannot proceed with bootstrap. Please configure it and try again.")
 	}
 
 	if err := params.validate(); err != nil {
-		return "", errors.E(fmt.Errorf("invalid bootstrap parameters: %v", err))
+		return "", errors.Newf("invalid bootstrap parameters: %v", err)
 	}
 
 	temp, err := os.MkdirTemp("", "juju-data-dir")
 	if err != nil {
-		return "", errors.E(fmt.Errorf("failed to create temporary directory for Juju data: %w", err))
+		return "", errors.Newf("failed to create temporary directory for Juju data: %w", err)
 	}
 
 	jobId, err := b.tracker.Run(
@@ -273,7 +273,7 @@ func (b *bootstrapManager) StartBootstrapJob(ctx context.Context, user *openfga.
 		maxJobDuration,
 	)
 	if err != nil {
-		return "", errors.E(fmt.Errorf("failed to start bootstrap job: %w", err))
+		return "", errors.Newf("failed to start bootstrap job: %w", err)
 	}
 
 	return jobId.String(), nil
@@ -379,7 +379,7 @@ func (b *bootstrapManager) BootstrapJob(
 		// Lock the bootstrap for the same length the process is allowed to run for
 		// before being killed.
 		if err := b.store.LockBootstrap(jobCtx, jujucommands.CommandKillDelay); err != nil {
-			return errors.E(fmt.Errorf("failed to acquire bootstrap lock: %w", err))
+			return errors.Newf("failed to acquire bootstrap lock: %w", err)
 		}
 
 		// Use a background context to unlock the bootstrap lock.
@@ -399,10 +399,10 @@ func (b *bootstrapManager) BootstrapJob(
 		// This needs to be fixed.
 		err := b.store.GetController(jobCtx, &dbmodel.Controller{Name: p.ControllerName})
 		if err == nil {
-			return errors.E(errors.CodeAlreadyExists, fmt.Errorf("controller %q already exists", p.ControllerName))
+			return errors.Newf("controller %q already exists", p.ControllerName).WithCode(errors.CodeAlreadyExists)
 		}
 		if errors.ErrorCode(err) != errors.CodeNotFound {
-			return errors.E(fmt.Errorf("failed to check if controller exists: %w", err))
+			return errors.Newf("failed to check if controller exists: %w", err)
 		}
 
 		b.writeJobLog(jobCtx, jobId,
@@ -420,7 +420,7 @@ func (b *bootstrapManager) BootstrapJob(
 			},
 		)
 		if err != nil {
-			return errors.E(fmt.Errorf("failed to get Juju binary: %w", err))
+			return errors.Newf("failed to get Juju binary: %w", err)
 		}
 		zapctx.Debug(jobCtx, "Juju binary downloaded, using Juju binary", zap.String("binary-path", binary.FullPath))
 		defer binaryDone(binary)
@@ -428,7 +428,7 @@ func (b *bootstrapManager) BootstrapJob(
 		jujuCmds := cmdFactory.New(binary.FullPath, p.JujuDataDir)
 
 		if err := b.runBootstrap(jobCtx, p, jobId, jujuCmds, user); err != nil {
-			return errors.E(fmt.Errorf("run bootstrap failed: %w", err))
+			return errors.Newf("run bootstrap failed: %w", err)
 		}
 		return nil
 	}
@@ -463,7 +463,7 @@ func (b *bootstrapManager) runBootstrap(
 		},
 	)
 	if err != nil {
-		return errors.E(fmt.Errorf("failed to run bootstrap command: %w", err))
+		return errors.Newf("failed to run bootstrap command: %w", err)
 	}
 	defer cleanup()
 
@@ -483,8 +483,8 @@ func (b *bootstrapManager) runBootstrap(
 	controllerCleanup := func(err error, controllerDetails *jujuclient.ControllerDetails) error {
 		cleanupErr := b.tryCleanupController(jobCtx, executor, jobId, p.ControllerName)
 		if cleanupErr == nil {
-			return errors.E(fmt.Errorf("error post-bootstrap: %w\n"+
-				"the controller has been automatically destroyed", err))
+			return errors.Newf("error post-bootstrap: %w\n"+
+				"the controller has been automatically destroyed", err)
 		}
 		var controllerDetailsStr string
 		if controllerDetails != nil {
@@ -494,13 +494,13 @@ func (b *bootstrapManager) runBootstrap(
 
 		zapctx.Error(jobCtx, "failed to cleanup controller after failing to add it to JIMM",
 			zap.NamedError("BootstrapError", err), zap.NamedError("CleanupError", cleanupErr))
-		return errors.E(fmt.Errorf("error post-bootstrap: %w\n"+
+		return errors.Newf("error post-bootstrap: %w\n"+
 			"automatic cleanup of the controller also failed: %w\n"+
 			"\n"+
 			"WARNING: resources associated with the controller may remain dangling in your environment.\n"+
 			"Manual intervention is required, either attach the controller to JIMM or destroy it.\n"+
 			"\n"+
-			"Controller details:\n%s", err, cleanupErr, controllerDetailsStr))
+			"Controller details:\n%s", err, cleanupErr, controllerDetailsStr)
 
 	}
 
@@ -560,7 +560,7 @@ func (b *bootstrapManager) tryCleanupController(ctx context.Context, jujuCmd Juj
 		},
 	)
 	if err != nil {
-		return errors.E(fmt.Errorf("failed to run destroy-controller command: %w", err))
+		return errors.Newf("failed to run destroy-controller command: %w", err)
 	}
 
 	err = b.consumeCommandOutput(ctx, outputCh, jobID)
@@ -575,7 +575,7 @@ func (b *bootstrapManager) consumeCommandOutput(ctx context.Context, outputCh <-
 	for output := range outputCh {
 		if output.Err != nil {
 			b.writeJobLog(ctx, jobId, output.Err.Error())
-			return errors.E(fmt.Errorf("command failed: %w", output.Err))
+			return errors.Newf("command failed: %w", output.Err)
 		}
 		b.writeJobLog(ctx, jobId, output.Line)
 	}
@@ -595,7 +595,7 @@ func (b *bootstrapManager) StartDestroyControllerJob(ctx context.Context, user *
 
 	jujuDataDir, err := os.MkdirTemp("", "juju-data-dir")
 	if err != nil {
-		return "", errors.E(fmt.Errorf("failed to create temporary directory for Juju data: %w", err))
+		return "", errors.Newf("failed to create temporary directory for Juju data: %w", err)
 	}
 
 	jobId, err := b.tracker.Run(
@@ -605,7 +605,7 @@ func (b *bootstrapManager) StartDestroyControllerJob(ctx context.Context, user *
 		maxJobDuration,
 	)
 	if err != nil {
-		return "", errors.E(fmt.Errorf("failed to start bootstrap job: %w", err))
+		return "", errors.Newf("failed to start bootstrap job: %w", err)
 	}
 
 	return jobId.String(), nil
@@ -637,7 +637,7 @@ func (b *bootstrapManager) DestroyControllerJob(
 		// Lock the bootstrap for the same length the process is allowed to run for
 		// before being killed.
 		if err := b.store.LockBootstrap(jobCtx, jujucommands.CommandKillDelay); err != nil {
-			return errors.E(fmt.Errorf("failed to acquire bootstrap lock: %w", err))
+			return errors.Newf("failed to acquire bootstrap lock: %w", err)
 		}
 
 		// Use a background context to unlock the bootstrap lock.
@@ -667,7 +667,7 @@ func (b *bootstrapManager) DestroyControllerJob(
 			},
 		)
 		if err != nil {
-			return errors.E(fmt.Errorf("failed to get Juju binary: %w", err))
+			return errors.Newf("failed to get Juju binary: %w", err)
 		}
 		zapctx.Debug(jobCtx, "Juju binary downloaded, using Juju binary", zap.String("binary-path", binary.FullPath))
 		defer func() {
@@ -678,7 +678,7 @@ func (b *bootstrapManager) DestroyControllerJob(
 
 		username, password, err := b.credentialStore.GetControllerCredentials(jobCtx, params.ControllerName)
 		if err != nil {
-			return errors.E(fmt.Errorf("failed to get controller credentials: %w", err))
+			return errors.Newf("failed to get controller credentials: %w", err)
 		}
 
 		// Update the context from this point to prevent it from being cancelled when the parent is cancelled.
@@ -706,7 +706,7 @@ func (b *bootstrapManager) DestroyControllerJob(
 			},
 		)
 		if err != nil {
-			return errors.E(fmt.Errorf("failed to run destroy-controller command: %w", err))
+			return errors.Newf("failed to run destroy-controller command: %w", err)
 		}
 		err = b.consumeCommandOutput(jobCtx, outputCh, jobId)
 		if err != nil {
@@ -717,7 +717,7 @@ func (b *bootstrapManager) DestroyControllerJob(
 		zapctx.Debug(jobCtx, "controller destroyed, removing from jimm")
 		err = b.jujuManager.RemoveController(jobCtx, user, params.ControllerName, true)
 		if err != nil {
-			return errors.E(fmt.Errorf("failed to remove controller: %w", err))
+			return errors.Newf("failed to remove controller: %w", err)
 		}
 
 		return nil

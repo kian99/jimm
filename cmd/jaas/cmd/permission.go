@@ -181,7 +181,7 @@ func (c *addPermission) Init(args []string) error {
 	}
 	err := verifyTupleArguments(args)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	c.object, c.relation, c.targetObject = args[0], args[1], args[2]
 	return nil
@@ -201,7 +201,7 @@ func (c *addPermission) SetFlags(f *gnuflag.FlagSet) {
 func (c *addPermission) Run(ctxt *cmd.Context) error {
 	currentController, err := c.store.CurrentController()
 	if err != nil {
-		return errors.E(err, "could not determine controller")
+		return errors.Wrap(err).WithMessage("could not determine controller")
 	}
 
 	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
@@ -226,7 +226,7 @@ func (c *addPermission) Run(ctxt *cmd.Context) error {
 	client := api.NewClient(apiCaller)
 	err = client.AddRelation(&params)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	return nil
@@ -274,7 +274,7 @@ func (c *removePermissionCommand) Init(args []string) error {
 	}
 	err := verifyTupleArguments(args)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	c.object, c.relation, c.targetObject = args[0], args[1], args[2]
 	return nil
@@ -294,7 +294,7 @@ func (c *removePermissionCommand) SetFlags(f *gnuflag.FlagSet) {
 func (c *removePermissionCommand) Run(ctxt *cmd.Context) error {
 	currentController, err := c.store.CurrentController()
 	if err != nil {
-		return errors.E(err, "could not determine controller")
+		return errors.Wrap(err).WithMessage("could not determine controller")
 	}
 
 	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
@@ -319,7 +319,7 @@ func (c *removePermissionCommand) Run(ctxt *cmd.Context) error {
 	client := api.NewClient(apiCaller)
 	err = client.RemoveRelation(&params)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	return nil
@@ -387,7 +387,7 @@ func (c *checkPermissionCommand) SetFlags(f *gnuflag.FlagSet) {
 func (c *checkPermissionCommand) Init(args []string) error {
 	err := verifyTupleArguments(args)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	c.tuple = apiparams.RelationshipTuple{
 		Object:       args[0],
@@ -400,11 +400,11 @@ func (c *checkPermissionCommand) Init(args []string) error {
 func formatCheckRelationString(writer io.Writer, value interface{}) error {
 	accessResult, ok := value.(accessResult)
 	if !ok {
-		return errors.E("failed to parse access result")
+		return errors.New("failed to parse access result")
 	}
 	_, err := writer.Write([]byte((&accessResult).setMessage().Msg))
 	if err != nil {
-		return errors.E("failed to write access result", err)
+		return errors.Wrap(err).WithMessage("failed to write access result")
 	}
 	return nil
 }
@@ -413,7 +413,7 @@ func formatCheckRelationString(writer io.Writer, value interface{}) error {
 func (c *checkPermissionCommand) Run(ctxt *cmd.Context) error {
 	currentController, err := c.store.CurrentController()
 	if err != nil {
-		return errors.E(err, "could not determine controller")
+		return errors.Wrap(err).WithMessage("could not determine controller")
 	}
 
 	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
@@ -458,13 +458,13 @@ func readTupleFile(filename string) ([]apiparams.RelationshipTuple, error) {
 func verifyTupleArguments(args []string) error {
 	switch len(args) {
 	default:
-		return errors.E("too many args")
+		return errors.New("too many args")
 	case 0:
-		return errors.E("object not specified")
+		return errors.New("object not specified")
 	case 1:
-		return errors.E("relation not specified")
+		return errors.New("relation not specified")
 	case 2:
-		return errors.E("target object not specified")
+		return errors.New("target object not specified")
 	case 3:
 	}
 	return nil
@@ -505,7 +505,7 @@ func (c *listPermissionsCommand) Info() *cmd.Info {
 // Init implements the cmd.Command interface.
 func (c *listPermissionsCommand) Init(args []string) error {
 	if len(args) > 0 {
-		return errors.E("too many args")
+		return errors.New("too many args")
 	}
 	return nil
 }
@@ -528,7 +528,7 @@ func (c *listPermissionsCommand) SetFlags(f *gnuflag.FlagSet) {
 func (c *listPermissionsCommand) Run(ctxt *cmd.Context) error {
 	currentController, err := c.store.CurrentController()
 	if err != nil {
-		return errors.E(err, "could not determine controller")
+		return errors.Wrap(err).WithMessage("could not determine controller")
 	}
 
 	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
@@ -544,14 +544,14 @@ func (c *listPermissionsCommand) Run(ctxt *cmd.Context) error {
 	}
 	result, err := fetchRelations(client, params)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	// Ensure continutation token is empty so that we don't print it.
 	result.ContinuationToken = ""
 	err = c.out.Write(ctxt, result)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	return nil
@@ -562,7 +562,7 @@ func fetchRelations(client *api.Client, params apiparams.ListRelationshipTuplesR
 	for {
 		response, err := client.ListRelationshipTuples(&params)
 		if err != nil {
-			return nil, errors.E(fmt.Sprintf("failed to fetch list of relationship tuples: %s", err.Error()))
+			return nil, errors.New("").WithMessagef("failed to fetch list of relationship tuples: %s", err.Error())
 		}
 		tuples = append(tuples, response.Tuples...)
 
@@ -576,7 +576,7 @@ func fetchRelations(client *api.Client, params apiparams.ListRelationshipTuplesR
 func formatRelationsTabular(writer io.Writer, value interface{}) error {
 	resp, ok := value.(*apiparams.ListRelationshipTuplesResponse)
 	if !ok {
-		return errors.E(fmt.Sprintf("expected value of type %T, got %T", resp, value))
+		return errors.New("").WithMessagef("expected value of type %T, got %T", resp, value)
 	}
 
 	table := uitable.New()

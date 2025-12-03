@@ -30,12 +30,12 @@ func (r *controllerRoot) AddGroup(ctx context.Context, req apiparams.AddGroupReq
 	resp := apiparams.AddGroupResponse{}
 
 	if !jimmnames.IsValidGroupName(req.Name) {
-		return resp, errors.E(errors.CodeBadRequest, "invalid group name")
+		return resp, errors.New("invalid group name").WithCode(errors.CodeBadRequest)
 	}
 
 	groupEntry, err := r.jimm.GroupManager().AddGroup(ctx, r.user, req.Name)
 	if err != nil {
-		return resp, errors.E(fmt.Errorf("failed to add group: %w", err))
+		return resp, errors.Newf("failed to add group: %w", err)
 	}
 	resp = apiparams.AddGroupResponse{Group: apiparams.Group{
 		Name:      groupEntry.Name,
@@ -54,16 +54,16 @@ func (r *controllerRoot) GetGroup(ctx context.Context, req apiparams.GetGroupReq
 	var err error
 	switch {
 	case req.UUID != "" && req.Name != "":
-		return apiparams.Group{}, errors.E(errors.CodeBadRequest, "only one of UUID or Name should be provided")
+		return apiparams.Group{}, errors.New("only one of UUID or Name should be provided").WithCode(errors.CodeBadRequest)
 	case req.UUID != "":
 		groupEntry, err = r.jimm.GroupManager().GetGroupByUUID(ctx, r.user, req.UUID)
 	case req.Name != "":
 		groupEntry, err = r.jimm.GroupManager().GetGroupByName(ctx, r.user, req.Name)
 	default:
-		return apiparams.Group{}, errors.E(errors.CodeBadRequest, "no UUID or Name provided")
+		return apiparams.Group{}, errors.New("no UUID or Name provided").WithCode(errors.CodeBadRequest)
 	}
 	if err != nil {
-		return apiparams.Group{}, errors.E(fmt.Errorf("failed to get group: %w", err))
+		return apiparams.Group{}, errors.Newf("failed to get group: %w", err)
 	}
 
 	return apiparams.Group{
@@ -78,11 +78,11 @@ func (r *controllerRoot) GetGroup(ctx context.Context, req apiparams.GetGroupReq
 func (r *controllerRoot) RenameGroup(ctx context.Context, req apiparams.RenameGroupRequest) error {
 
 	if !jimmnames.IsValidGroupName(req.NewName) {
-		return errors.E(errors.CodeBadRequest, "invalid group name")
+		return errors.New("invalid group name").WithCode(errors.CodeBadRequest)
 	}
 
 	if err := r.jimm.GroupManager().RenameGroup(ctx, r.user, req.Name, req.NewName); err != nil {
-		return errors.E(fmt.Errorf("failed to rename group: %w", err))
+		return errors.Newf("failed to rename group: %w", err)
 	}
 	return nil
 }
@@ -91,7 +91,7 @@ func (r *controllerRoot) RenameGroup(ctx context.Context, req apiparams.RenameGr
 func (r *controllerRoot) RemoveGroup(ctx context.Context, req apiparams.RemoveGroupRequest) error {
 
 	if err := r.jimm.GroupManager().RemoveGroup(ctx, r.user, req.Name); err != nil {
-		return errors.E(fmt.Errorf("failed to remove group: %w", err))
+		return errors.Newf("failed to remove group: %w", err)
 	}
 	return nil
 }
@@ -102,7 +102,7 @@ func (r *controllerRoot) ListGroups(ctx context.Context, req apiparams.ListGroup
 	pagination := pagination.NewOffsetFilter(req.Limit, req.Offset)
 	groups, err := r.jimm.GroupManager().ListGroups(ctx, r.user, pagination, "")
 	if err != nil {
-		return apiparams.ListGroupResponse{}, errors.E(fmt.Errorf("failed to list groups: %w", err))
+		return apiparams.ListGroupResponse{}, errors.Newf("failed to list groups: %w", err)
 	}
 	groupsResponse := make([]apiparams.Group, len(groups))
 	for i, g := range groups {
@@ -122,7 +122,7 @@ func (r *controllerRoot) ListGroups(ctx context.Context, req apiparams.ListGroup
 func (r *controllerRoot) AddRelation(ctx context.Context, req apiparams.AddRelationRequest) error {
 
 	if err := r.jimm.PermissionManager().AddRelation(ctx, r.user, req.Tuples); err != nil {
-		return errors.E(fmt.Errorf("failed to add relation: %w", err))
+		return errors.Newf("failed to add relation: %w", err)
 	}
 	return nil
 }
@@ -133,7 +133,7 @@ func (r *controllerRoot) RemoveRelation(ctx context.Context, req apiparams.Remov
 
 	err := r.jimm.PermissionManager().RemoveRelation(ctx, r.user, req.Tuples)
 	if err != nil {
-		return errors.E(fmt.Errorf("failed to remove relation: %w", err))
+		return errors.Newf("failed to remove relation: %w", err)
 	}
 	return nil
 }
@@ -148,7 +148,7 @@ func (r *controllerRoot) CheckRelation(ctx context.Context, req apiparams.CheckR
 	allowed, err := r.jimm.PermissionManager().CheckRelation(ctx, r.user, req.Tuple, false)
 	if err != nil {
 		checkResp.Error = err.Error()
-		return checkResp, errors.E(fmt.Errorf("failed to check relation: %w", err))
+		return checkResp, errors.Newf("failed to check relation: %w", err)
 	}
 	checkResp.Allowed = allowed
 	zapctx.Debug(ctx, "check request", zap.String("allowed", strconv.FormatBool(allowed)))
@@ -163,7 +163,7 @@ func (r *controllerRoot) CheckRelations(ctx context.Context, req apiparams.Check
 
 	results, err := r.jimm.PermissionManager().CheckRelations(ctx, r.user, req.Tuples)
 	if err != nil {
-		return checksResp, errors.E(fmt.Errorf("failed to check relations: %w", err))
+		return checksResp, errors.Newf("failed to check relations: %w", err)
 	}
 	for _, result := range results {
 		resp := apiparams.CheckRelationResponse{
@@ -183,7 +183,7 @@ func (r *controllerRoot) ListRelationshipTuples(ctx context.Context, req apipara
 
 	responseTuples, ct, err := r.jimm.PermissionManager().ListRelationshipTuples(ctx, r.user, req.Tuple, req.PageSize, req.ContinuationToken)
 	if err != nil {
-		return apiparams.ListRelationshipTuplesResponse{}, errors.E(fmt.Errorf("failed to list relations: %w", err))
+		return apiparams.ListRelationshipTuplesResponse{}, errors.Newf("failed to list relations: %w", err)
 	}
 	errors := []string{}
 	tuples := make([]apiparams.RelationshipTuple, len(responseTuples))

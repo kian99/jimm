@@ -22,7 +22,7 @@ func (d *Database) AddJobLog(ctx context.Context, jobId uuid.UUID, logLine strin
 	const op = "db.AddJobLog"
 
 	if err := d.ready(); err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
@@ -32,7 +32,7 @@ func (d *Database) AddJobLog(ctx context.Context, jobId uuid.UUID, logLine strin
 	return d.Transaction(func(d *Database) error {
 		// Blocks all other operations, including reads, writes, and other locks.
 		if err := d.DB.Exec(jobLoglockQuery).Error; err != nil {
-			return errors.E("failed to lock job_logs table", err)
+			return errors.Wrap(err).WithMessage("failed to lock job_logs table")
 		}
 
 		// Get the current line number for this job.
@@ -43,18 +43,18 @@ func (d *Database) AddJobLog(ctx context.Context, jobId uuid.UUID, logLine strin
 			Select("COALESCE(MAX(line_number), 0)").
 			Scan(&currentLineNumber).Error
 		if err != nil {
-			return errors.E("failed to get current line number", err)
+			return errors.Wrap(err).WithMessage("failed to get current line number")
 		}
 
 		nextLineNumber := currentLineNumber + 1
 
 		log, err := dbmodel.NewJobLog(jobId, nextLineNumber, logLine)
 		if err != nil {
-			return errors.E("failed to construct job log", err)
+			return errors.Wrap(err).WithMessage("failed to construct job log")
 		}
 
 		if err := d.DB.WithContext(ctx).Create(log).Error; err != nil {
-			return errors.E(dbError(err))
+			return dbError(err)
 		}
 		return nil
 	})
@@ -69,7 +69,7 @@ func (d *Database) QueryJobLog(ctx context.Context, jobId uuid.UUID, offset int)
 	const op = "db.QueryJobLog"
 
 	if err := d.ready(); err != nil {
-		return loggies, nextOffsetValue, errors.E(err)
+		return loggies, nextOffsetValue, err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
@@ -80,7 +80,7 @@ func (d *Database) QueryJobLog(ctx context.Context, jobId uuid.UUID, offset int)
 	err = d.Transaction(func(d *Database) error {
 		// Make sure job exists, if it doesn't, there's no point running the query
 		if err := d.DB.WithContext(ctx).First(&dbmodel.JobTrackerEntry{JobID: jobId}, "job_id = ?", jobId).Error; err != nil {
-			return errors.E("job not found", dbError(err))
+			return errors.Wrap(dbError(err)).WithMessage("job not found")
 		}
 
 		query := d.DB.WithContext(ctx).
@@ -89,7 +89,7 @@ func (d *Database) QueryJobLog(ctx context.Context, jobId uuid.UUID, offset int)
 
 		var count int64
 		if err := query.Count(&count).Error; err != nil {
-			return errors.E(dbError(err))
+			return dbError(err)
 		}
 
 		if count == 0 {
@@ -98,7 +98,7 @@ func (d *Database) QueryJobLog(ctx context.Context, jobId uuid.UUID, offset int)
 
 		result := query.Offset(offset).Order("line_number ASC").Find(&logs)
 		if result.Error != nil {
-			return errors.E(dbError(result.Error))
+			return dbError(result.Error)
 		}
 
 		// Get the next line number
@@ -109,7 +109,7 @@ func (d *Database) QueryJobLog(ctx context.Context, jobId uuid.UUID, offset int)
 			Select("COALESCE(MAX(line_number), 0)").
 			Scan(&currentLineNumber).Error
 		if err != nil {
-			return errors.E("failed to get current line number", err)
+			return errors.Wrap(err).WithMessage("failed to get current line number")
 		}
 
 		nextOffsetValue = currentLineNumber

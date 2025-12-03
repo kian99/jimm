@@ -24,7 +24,7 @@ import (
 func (c Connection) CreateModel(ctx context.Context, args *jujuparams.ModelCreateArgs, info *jujuparams.ModelInfo) error {
 
 	if err := c.Call(ctx, "ModelManager", 10, "", "CreateModel", args, info); err != nil {
-		return errors.E(jujuerrors.Cause(err))
+		return jujuerrors.Cause(err)
 	}
 	return nil
 }
@@ -50,10 +50,10 @@ func (c Connection) ModelInfo(ctx context.Context, info *jujuparams.ModelInfo) e
 	}
 	err := c.Call(ctx, "ModelManager", 10, "", "ModelInfo", &args, &resp)
 	if err != nil {
-		return errors.E(jujuerrors.Cause(err))
+		return jujuerrors.Cause(err)
 	}
 	if resp.Results[0].Error != nil {
-		return errors.E(resp.Results[0].Error)
+		return resp.Results[0].Error
 	}
 	return nil
 }
@@ -79,10 +79,10 @@ func (c Connection) GrantJIMMModelAdmin(ctx context.Context, tag names.ModelTag)
 		Results: make([]jujuparams.ErrorResult, 1),
 	}
 	if err := c.Call(ctx, "ModelManager", 10, "", "ModifyModelAccess", &args, &resp); err != nil {
-		return errors.E(jujuerrors.Cause(err))
+		return jujuerrors.Cause(err)
 	}
 	if resp.Results[0].Error != nil {
-		return errors.E(resp.Results[0].Error)
+		return resp.Results[0].Error
 	}
 	return nil
 }
@@ -103,10 +103,10 @@ func (c Connection) DumpModel(ctx context.Context, tag names.ModelTag, simplifie
 		Results: make([]jujuparams.StringResult, 1),
 	}
 	if err := c.Call(ctx, "ModelManager", 10, "", "DumpModels", &args, &resp); err != nil {
-		return "", errors.E(jujuerrors.Cause(err))
+		return "", jujuerrors.Cause(err)
 	}
 	if resp.Results[0].Error != nil {
-		return "", errors.E(resp.Results[0].Error)
+		return "", resp.Results[0].Error
 	}
 	return resp.Results[0].Result, nil
 }
@@ -125,10 +125,10 @@ func (c Connection) DumpModelDB(ctx context.Context, tag names.ModelTag) (map[st
 		Results: make([]jujuparams.MapResult, 1),
 	}
 	if err := c.Call(ctx, "ModelManager", 10, "", "DumpModelsDB", &args, &resp); err != nil {
-		return nil, errors.E(jujuerrors.Cause(err))
+		return nil, jujuerrors.Cause(err)
 	}
 	if resp.Results[0].Error != nil {
-		return nil, errors.E(resp.Results[0].Error)
+		return nil, resp.Results[0].Error
 	}
 	return resp.Results[0].Result, nil
 }
@@ -152,10 +152,10 @@ func (c Connection) GrantModelAccess(ctx context.Context, modelTag names.ModelTa
 	}
 	err := c.Call(ctx, "ModelManager", 10, "", "ModifyModelAccess", &args, &resp)
 	if err != nil {
-		return errors.E(jujuerrors.Cause(err))
+		return jujuerrors.Cause(err)
 	}
 	if resp.Results[0].Error != nil {
-		return errors.E(resp.Results[0].Error)
+		return resp.Results[0].Error
 	}
 	return nil
 }
@@ -179,10 +179,10 @@ func (c Connection) RevokeModelAccess(ctx context.Context, modelTag names.ModelT
 	}
 	err := c.Call(ctx, "ModelManager", 10, "", "ModifyModelAccess", &args, &resp)
 	if err != nil {
-		return errors.E(jujuerrors.Cause(err))
+		return jujuerrors.Cause(err)
 	}
 	if resp.Results[0].Error != nil {
-		return errors.E(resp.Results[0].Error)
+		return resp.Results[0].Error
 	}
 	return nil
 }
@@ -199,7 +199,7 @@ func (c Connection) ControllerModelSummary(ctx context.Context, ms *jujuparams.M
 	var resp jujuparams.ModelSummaryResults
 	err := c.Call(ctx, "ModelManager", 10, "", "ListModelSummaries", &args, &resp)
 	if err != nil {
-		return errors.E(jujuerrors.Cause(err))
+		return jujuerrors.Cause(err)
 	}
 	for _, r := range resp.Results {
 		if r.Result != nil && r.Result.IsController {
@@ -207,7 +207,7 @@ func (c Connection) ControllerModelSummary(ctx context.Context, ms *jujuparams.M
 			return nil
 		}
 	}
-	return errors.E("controller model not found", errors.CodeNotFound)
+	return errors.New("controller model not found").WithCode(errors.CodeNotFound)
 }
 
 // ListModelSummaries retrieves the list of model summaries from the controler
@@ -220,7 +220,7 @@ func (c Connection) ListModelSummaries(ctx context.Context, ms jujuparams.ModelS
 	var resp jujuparams.ModelSummaryResults
 	err := c.Call(ctx, "ModelManager", 10, "", "ListModelSummaries", &args, &resp)
 	if err != nil {
-		return jujuparams.ModelSummaryResults{}, errors.E(jujuerrors.Cause(err))
+		return jujuparams.ModelSummaryResults{}, jujuerrors.Cause(err)
 	}
 
 	return resp, nil
@@ -241,10 +241,10 @@ func (c Connection) ValidateModelUpgrade(ctx context.Context, model names.ModelT
 	}
 	err := c.Call(ctx, "ModelManager", 10, "", "ValidateModelUpgrades", &args, &resp)
 	if err != nil {
-		return errors.E(jujuerrors.Cause(err))
+		return jujuerrors.Cause(err)
 	}
 	if resp.Results[0].Error != nil {
-		return errors.E(resp.Results[0].Error)
+		return resp.Results[0].Error
 	}
 	return nil
 }
@@ -270,10 +270,10 @@ func (c Connection) DestroyModel(ctx context.Context, tag names.ModelTag, destro
 	}
 	err := c.Call(ctx, "ModelManager", 10, "", "DestroyModels", &args, &resp)
 	if err != nil {
-		return errors.E(jujuerrors.Cause(err))
+		return jujuerrors.Cause(err)
 	}
 	if resp.Results[0].Error != nil {
-		return errors.E(resp.Results[0].Error)
+		return resp.Results[0].Error
 	}
 	return nil
 }
@@ -297,10 +297,10 @@ func (c Connection) ModelStatus(ctx context.Context, status *jujuparams.ModelSta
 	}
 	err := c.Call(ctx, "ModelManager", 10, "", "ModelStatus", &args, &resp)
 	if err != nil {
-		return errors.E(jujuerrors.Cause(err))
+		return jujuerrors.Cause(err)
 	}
 	if resp.Results[0].Error != nil {
-		return errors.E(resp.Results[0].Error)
+		return resp.Results[0].Error
 	}
 	*status = resp.Results[0]
 	return nil
@@ -319,7 +319,7 @@ func (c Connection) ChangeModelCredential(ctx context.Context, model names.Model
 
 	err := c.Call(ctx, "ModelManager", 10, "", "ChangeModelCredential", &args, &out)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	return out.OneError()
 }

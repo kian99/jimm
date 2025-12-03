@@ -116,7 +116,7 @@ func (m *Model) FromJujuModelInfo(info jujuparams.ModelInfo) error {
 	if info.OwnerTag != "" {
 		ut, err := names.ParseUserTag(info.OwnerTag)
 		if err != nil {
-			return errors.E(err)
+			return err
 		}
 		m.OwnerIdentityName = ut.Id()
 	}
@@ -126,14 +126,14 @@ func (m *Model) FromJujuModelInfo(info jujuparams.ModelInfo) error {
 	if info.CloudTag != "" {
 		ct, err := names.ParseCloudTag(info.CloudTag)
 		if err != nil {
-			return errors.E(err)
+			return err
 		}
 		m.CloudRegion.Cloud.Name = ct.Id()
 	}
 	if info.CloudCredentialTag != "" {
 		cct, err := names.ParseCloudCredentialTag(info.CloudCredentialTag)
 		if err != nil {
-			return errors.E(err)
+			return err
 		}
 		m.CloudCredential.Name = cct.Name()
 		m.CloudCredential.CloudName = cct.Cloud().Id()

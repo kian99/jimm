@@ -29,10 +29,10 @@ func (c Connection) CheckCredentialModels(ctx context.Context, cred jujuparams.T
 		Results: make([]jujuparams.UpdateCredentialResult, 1),
 	}
 	if err := c.CallHighestFacadeVersion(ctx, "Cloud", []int{7}, "", "CheckCredentialsModels", &in, &out); err != nil {
-		return nil, errors.E(jujuerrors.Cause(err))
+		return nil, jujuerrors.Cause(err)
 	}
 	if out.Results[0].Error != nil {
-		return out.Results[0].Models, errors.E(out.Results[0].Error)
+		return out.Results[0].Models, out.Results[0].Error
 	}
 	return out.Results[0].Models, nil
 }
@@ -71,10 +71,10 @@ func (c Connection) UpdateCredential(ctx context.Context, cred jujuparams.Tagged
 	// unmarshal correctly into the latter so there is no need to use
 	// a different response type.
 	if err := c.CallHighestFacadeVersion(ctx, "Cloud", []int{7}, "", "UpdateCredentialsCheckModels", &update, &out); err != nil {
-		return nil, errors.E(jujuerrors.Cause(err))
+		return nil, jujuerrors.Cause(err)
 	}
 	if out.Results[0].Error != nil {
-		return out.Results[0].Models, errors.E(out.Results[0].Error)
+		return out.Results[0].Models, out.Results[0].Error
 	}
 	return out.Results[0].Models, nil
 }
@@ -103,11 +103,11 @@ func (c Connection) RevokeCredential(ctx context.Context, cred names.CloudCreden
 		}},
 	}
 	if err := c.CallHighestFacadeVersion(ctx, "Cloud", []int{7}, "", "RevokeCredentialsCheckModels", &in, &out); err != nil {
-		return errors.E(jujuerrors.Cause(err))
+		return jujuerrors.Cause(err)
 	}
 
 	if out.Results[0].Error != nil {
-		return errors.E(out.Results[0].Error)
+		return out.Results[0].Error
 	}
 	return nil
 }

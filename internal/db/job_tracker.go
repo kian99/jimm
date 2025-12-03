@@ -20,7 +20,7 @@ import (
 func (d *Database) AddJob(ctx context.Context, jobType string) (jobId uuid.UUID, err error) {
 	const op = "db.AddJob"
 	if err := d.ready(); err != nil {
-		return jobId, errors.E(err)
+		return jobId, err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
@@ -31,15 +31,15 @@ func (d *Database) AddJob(ctx context.Context, jobType string) (jobId uuid.UUID,
 
 	entry, err := dbmodel.NewJobTrackerEntry(jobType)
 	if err != nil {
-		return jobId, errors.E(fmt.Sprintf("failed to create new job tracker entry: %v", err))
+		return jobId, errors.New("").WithMessagef("failed to create new job tracker entry: %v", err)
 	}
 	if err := db.Create(entry).Error; err != nil {
 		err := dbError(err)
 		if errors.ErrorCode(err) == errors.CodeAlreadyExists {
 			zapctx.Debug(ctx, "job already exists", zap.String("jobID", entry.JobID.String()))
-			return jobId, errors.E(fmt.Sprintf("job %s already exists", entry.JobID), err)
+			return jobId, errors.Wrap(err).WithMessagef("job %s already exists", entry.JobID)
 		}
-		return jobId, errors.E(err)
+		return jobId, err
 	}
 
 	jobId = entry.JobID
@@ -51,7 +51,7 @@ func (d *Database) GetJob(ctx context.Context, job *dbmodel.JobTrackerEntry) err
 	const op = "db.GetJob"
 	var err error
 	if err := d.ready(); err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
@@ -59,7 +59,7 @@ func (d *Database) GetJob(ctx context.Context, job *dbmodel.JobTrackerEntry) err
 	defer servermon.ErrorCounter(servermon.DBQueryErrorCount, &err, op)
 
 	if job.JobID == uuid.Nil {
-		return errors.E(errors.CodeBadRequest, "job ID cannot be empty")
+		return errors.New("job ID cannot be empty").WithCode(errors.CodeBadRequest)
 	}
 	db := d.DB.WithContext(ctx)
 	if err := db.Where("job_id = ?", job.JobID).First(&job).Error; err != nil {
@@ -74,7 +74,7 @@ func (d *Database) GetJob(ctx context.Context, job *dbmodel.JobTrackerEntry) err
 func (d *Database) GetJobStopSignal(ctx context.Context, jobId uuid.UUID) (stopSignal bool, err error) {
 	const op = "db.GetJobStopSignal"
 	if err := d.ready(); err != nil {
-		return false, errors.E(err)
+		return false, err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
@@ -95,7 +95,7 @@ func (d *Database) GetJobStopSignal(ctx context.Context, jobId uuid.UUID) (stopS
 func (d *Database) StopJob(ctx context.Context, jobId uuid.UUID) (err error) {
 	const op = "db.StopJob"
 	if err := d.ready(); err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
@@ -110,7 +110,7 @@ func (d *Database) StopJob(ctx context.Context, jobId uuid.UUID) (err error) {
 	}
 
 	if result.RowsAffected == 0 {
-		return errors.E(errors.CodeNotFound, fmt.Sprintf("job %s not found", jobId))
+		return errors.New("").WithCode(errors.CodeNotFound).WithMessagef("job %s not found", jobId)
 	}
 
 	return nil
@@ -143,7 +143,7 @@ func (d *Database) SetJobFailed(ctx context.Context, jobId uuid.UUID, jobErr err
 		JobID: jobId,
 	}
 	if err := entry.SetFailed(jobErr); err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	return d.updateJob(ctx, entry)
@@ -152,7 +152,7 @@ func (d *Database) SetJobFailed(ctx context.Context, jobId uuid.UUID, jobErr err
 func (d *Database) updateJob(ctx context.Context, entry dbmodel.JobTrackerEntry) (err error) {
 	const op = "db.updateJobStatus"
 	if err := d.ready(); err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
@@ -166,7 +166,7 @@ func (d *Database) updateJob(ctx context.Context, entry dbmodel.JobTrackerEntry)
 	}
 
 	if result.RowsAffected == 0 {
-		return errors.E(errors.CodeNotFound, fmt.Sprintf("job %s not found", entry.JobID))
+		return errors.New("").WithCode(errors.CodeNotFound).WithMessagef("job %s not found", entry.JobID)
 	}
 
 	return nil
@@ -177,7 +177,7 @@ func (d *Database) updateJob(ctx context.Context, entry dbmodel.JobTrackerEntry)
 func (d *Database) GetJobStatus(ctx context.Context, jobId uuid.UUID) (status dbmodel.JobStatus, err error) {
 	const op = "db.GetJobStatus"
 	if err := d.ready(); err != nil {
-		return status, errors.E(err)
+		return status, err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)

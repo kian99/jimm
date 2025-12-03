@@ -778,7 +778,7 @@ func TestOffer(t *testing.T) {
 			return nil
 		},
 		offer: func(context.Context, crossmodel.OfferURL, jujuparams.AddApplicationOffer) error {
-			return errors.E("a silly error")
+			return errors.New("a silly error")
 		},
 		createEnv: func(c *qt.C, db *db.Database, client *openfga.OFGAClient) (dbmodel.Identity, juju.AddApplicationOfferParams, dbmodel.ApplicationOffer, func(*qt.C, error)) {
 			ctx := context.Background()
@@ -897,7 +897,7 @@ func TestOffer(t *testing.T) {
 			return nil
 		},
 		offer: func(context.Context, crossmodel.OfferURL, jujuparams.AddApplicationOffer) error {
-			return errors.E(errors.CodeNotFound, "application test-app")
+			return errors.New("application test-app").WithCode(errors.CodeNotFound)
 		},
 		createEnv: func(c *qt.C, db *db.Database, client *openfga.OFGAClient) (dbmodel.Identity, juju.AddApplicationOfferParams, dbmodel.ApplicationOffer, func(*qt.C, error)) {
 			ctx := context.Background()
@@ -1071,7 +1071,7 @@ func TestOffer(t *testing.T) {
 	}, {
 		about: "fail to fetch application offer details",
 		getApplicationOffer: func(_ context.Context, details *jujuparams.ApplicationOfferAdminDetailsV5) error {
-			return errors.E("a silly error")
+			return errors.New("a silly error")
 		},
 		grantApplicationOfferAccess: func(context.Context, string, names.UserTag, jujuparams.OfferAccessPermission) error {
 			return nil
@@ -1164,7 +1164,7 @@ func TestOffer(t *testing.T) {
 			return nil
 		},
 		offer: func(context.Context, crossmodel.OfferURL, jujuparams.AddApplicationOffer) error {
-			return errors.E("application offer already exists")
+			return errors.New("application offer already exists")
 		},
 		createEnv: func(c *qt.C, db *db.Database, client *openfga.OFGAClient) (dbmodel.Identity, juju.AddApplicationOfferParams, dbmodel.ApplicationOffer, func(*qt.C, error)) {
 			ctx := context.Background()
@@ -1519,7 +1519,7 @@ func TestDestroyOffer(t *testing.T) {
 
 			if test.destroyError != "" {
 				select {
-				case destroyErrorsChannel <- errors.E(test.destroyError):
+				case destroyErrorsChannel <- test.destroyError:
 				default:
 				}
 			}
@@ -2013,7 +2013,7 @@ func TestGrantOfferAccessOnController(t *testing.T) {
 			API: &jimmtest.API{
 				GrantApplicationOfferAccess_: func(ctx context.Context, s string, ut names.UserTag, oap jujuparams.OfferAccessPermission) error {
 					if s != "test-offer-url" {
-						return errors.E(errors.CodeNotFound)
+						return errors.New("").WithCode(errors.CodeNotFound)
 					}
 					return nil
 				},
@@ -2087,7 +2087,7 @@ func TestRevokeOfferAccessOnController(t *testing.T) {
 			API: &jimmtest.API{
 				RevokeApplicationOfferAccess_: func(ctx context.Context, s string, ut names.UserTag, oap jujuparams.OfferAccessPermission) error {
 					if s != "test-offer-url" {
-						return errors.E(errors.CodeNotFound)
+						return errors.New("").WithCode(errors.CodeNotFound)
 					}
 					return nil
 				},

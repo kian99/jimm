@@ -149,7 +149,7 @@ func TestModelSummaryWatcher(t *testing.T) {
 						},
 						ModelSummaryWatcherNext_: func(ctx context.Context, id string) ([]jujuparams.ModelAbstract, error) {
 							if id != test.name {
-								return nil, errors.E("incorrect id")
+								return nil, errors.New("incorrect id")
 							}
 
 							select {
@@ -167,7 +167,7 @@ func TestModelSummaryWatcher(t *testing.T) {
 						},
 						ModelSummaryWatcherStop_: func(_ context.Context, id string) error {
 							if id != test.name {
-								return errors.E("incorrect id")
+								return errors.New("incorrect id")
 							}
 							atomic.StoreUint32(&stopped, 1)
 							return nil
@@ -180,7 +180,7 @@ func TestModelSummaryWatcher(t *testing.T) {
 							case "00000002-0000-0000-0000-000000000002":
 							case "00000002-0000-0000-0000-000000000003":
 							}
-							return errors.E(errors.CodeNotFound)
+							return errors.New("").WithCode(errors.CodeNotFound)
 						},
 					},
 				},
@@ -226,7 +226,7 @@ func TestWatcherSetsControllerUnavailable(t *testing.T) {
 			DB: jimmtest.PostgresDB(c, nil),
 		},
 		&jimmtest.Dialer{
-			Err: errors.E("test error"),
+			Err: errors.New("test error"),
 		},
 		&testPublisher{},
 		controllerUnavailableChannel,
@@ -285,7 +285,7 @@ func TestWatcherClearsControllerUnavailable(t *testing.T) {
 					case "00000002-0000-0000-0000-000000000002":
 					case "00000002-0000-0000-0000-000000000003":
 					}
-					return errors.E(errors.CodeNotFound)
+					return errors.New("").WithCode(errors.CodeNotFound)
 				},
 				WatchAllModelSummaries_: func(ctx context.Context) (string, error) {
 					return "1234", nil

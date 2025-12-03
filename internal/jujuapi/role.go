@@ -20,12 +20,12 @@ func (r *controllerRoot) AddRole(ctx context.Context, req apiparams.AddRoleReque
 	resp := apiparams.AddRoleResponse{}
 
 	if !jimmnames.IsValidRoleName(req.Name) {
-		return resp, errors.E(errors.CodeBadRequest, "invalid role name")
+		return resp, errors.New("invalid role name").WithCode(errors.CodeBadRequest)
 	}
 
 	roleEntry, err := r.jimm.RoleManager().AddRole(ctx, r.user, req.Name)
 	if err != nil {
-		return resp, errors.E(fmt.Errorf("failed to add role: %w", err))
+		return resp, errors.Newf("failed to add role: %w", err)
 	}
 	resp = apiparams.AddRoleResponse{Role: apiparams.Role{
 		Name:      roleEntry.Name,
@@ -44,18 +44,18 @@ func (r *controllerRoot) GetRole(ctx context.Context, req apiparams.GetRoleReque
 	var err error
 	switch {
 	case req.UUID != "" && req.Name != "":
-		return apiparams.Role{}, errors.E(errors.CodeBadRequest, "only one of UUID or Name should be provided")
+		return apiparams.Role{}, errors.New("only one of UUID or Name should be provided").WithCode(errors.CodeBadRequest)
 	case req.Name != "" && !jimmnames.IsValidRoleName(req.Name):
-		return apiparams.Role{}, errors.E(errors.CodeBadRequest, "invalid role name")
+		return apiparams.Role{}, errors.New("invalid role name").WithCode(errors.CodeBadRequest)
 	case req.UUID != "":
 		roleEntry, err = r.jimm.RoleManager().GetRoleByUUID(ctx, r.user, req.UUID)
 	case req.Name != "":
 		roleEntry, err = r.jimm.RoleManager().GetRoleByName(ctx, r.user, req.Name)
 	default:
-		return apiparams.Role{}, errors.E(errors.CodeBadRequest, "no UUID or Name provided")
+		return apiparams.Role{}, errors.New("no UUID or Name provided").WithCode(errors.CodeBadRequest)
 	}
 	if err != nil {
-		return apiparams.Role{}, errors.E(fmt.Errorf("failed to get role: %w", err))
+		return apiparams.Role{}, errors.Newf("failed to get role: %w", err)
 	}
 
 	return apiparams.Role{
@@ -70,11 +70,11 @@ func (r *controllerRoot) GetRole(ctx context.Context, req apiparams.GetRoleReque
 func (r *controllerRoot) RenameRole(ctx context.Context, req apiparams.RenameRoleRequest) error {
 
 	if !jimmnames.IsValidRoleName(req.NewName) {
-		return errors.E(errors.CodeBadRequest, "invalid role name")
+		return errors.New("invalid role name").WithCode(errors.CodeBadRequest)
 	}
 
 	if err := r.jimm.RoleManager().RenameRole(ctx, r.user, req.Name, req.NewName); err != nil {
-		return errors.E(fmt.Errorf("failed to rename role: %w", err))
+		return errors.Newf("failed to rename role: %w", err)
 	}
 	return nil
 }
@@ -83,11 +83,11 @@ func (r *controllerRoot) RenameRole(ctx context.Context, req apiparams.RenameRol
 func (r *controllerRoot) RemoveRole(ctx context.Context, req apiparams.RemoveRoleRequest) error {
 
 	if !jimmnames.IsValidRoleName(req.Name) {
-		return errors.E(errors.CodeBadRequest, "invalid role name")
+		return errors.New("invalid role name").WithCode(errors.CodeBadRequest)
 	}
 
 	if err := r.jimm.RoleManager().RemoveRole(ctx, r.user, req.Name); err != nil {
-		return errors.E(fmt.Errorf("failed to remove role: %w", err))
+		return errors.Newf("failed to remove role: %w", err)
 	}
 	return nil
 }
@@ -98,7 +98,7 @@ func (r *controllerRoot) ListRoles(ctx context.Context, req apiparams.ListRolesR
 	pagination := pagination.NewOffsetFilter(req.Limit, req.Offset)
 	roles, err := r.jimm.RoleManager().ListRoles(ctx, r.user, pagination, "")
 	if err != nil {
-		return apiparams.ListRoleResponse{}, errors.E(err)
+		return apiparams.ListRoleResponse{}, err
 	}
 	rolesResponse := make([]apiparams.Role, len(roles))
 	for i, g := range roles {

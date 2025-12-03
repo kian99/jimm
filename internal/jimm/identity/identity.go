@@ -21,10 +21,10 @@ type identityManager struct {
 // NewIdentityManager returns a new identityManager that persists the roles in the provided store.
 func NewIdentityManager(store *db.Database, authSvc *openfga.OFGAClient) (*identityManager, error) {
 	if store == nil {
-		return nil, errors.E("identity store cannot be nil")
+		return nil, errors.New("identity store cannot be nil")
 	}
 	if authSvc == nil {
-		return nil, errors.E("identity authorisation service cannot be nil")
+		return nil, errors.New("identity authorisation service cannot be nil")
 	}
 	return &identityManager{store, authSvc}, nil
 }
@@ -35,7 +35,7 @@ func (j *identityManager) FetchIdentity(ctx context.Context, id string) (*openfg
 
 	identity, err := dbmodel.NewIdentity(id)
 	if err != nil {
-		return nil, errors.E(err)
+		return nil, err
 	}
 
 	if err := j.store.FetchIdentity(ctx, identity); err != nil {
@@ -50,7 +50,7 @@ func (j *identityManager) FetchIdentity(ctx context.Context, id string) (*openfg
 func (j *identityManager) ListIdentities(ctx context.Context, user *openfga.User, pagination pagination.LimitOffsetPagination, match string) ([]openfga.User, error) {
 
 	if !user.JimmAdmin {
-		return nil, errors.E(errors.CodeUnauthorized, "unauthorized")
+		return nil, errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 	identities, err := j.store.ListIdentities(ctx, pagination.Limit(), pagination.Offset(), match)
 	var users []openfga.User
@@ -59,7 +59,7 @@ func (j *identityManager) ListIdentities(ctx context.Context, user *openfga.User
 		users = append(users, *openfga.NewUser(&id, j.authSvc))
 	}
 	if err != nil {
-		return nil, errors.E(err)
+		return nil, err
 	}
 	return users, nil
 }
@@ -68,12 +68,12 @@ func (j *identityManager) ListIdentities(ctx context.Context, user *openfga.User
 func (j *identityManager) CountIdentities(ctx context.Context, user *openfga.User) (int, error) {
 
 	if !user.JimmAdmin {
-		return 0, errors.E(errors.CodeUnauthorized, "unauthorized")
+		return 0, errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 
 	count, err := j.store.CountIdentities(ctx)
 	if err != nil {
-		return 0, errors.E(err)
+		return 0, err
 	}
 	return count, nil
 }

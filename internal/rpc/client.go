@@ -84,7 +84,7 @@ func (c *Client) recv() {
 		if msg.RequestID == 0 {
 			// Use a 0 request ID to indicate that the message
 			// received was not a valid RPC message.
-			c.handleError(errors.E("received invalid RPC message"))
+			c.handleError(errors.New("received invalid RPC message"))
 			break
 		}
 		if msg.isRequest() {
@@ -159,7 +159,7 @@ func (c *Client) Call(ctx context.Context, facade string, version int, id, metho
 		var err error
 		argsb, err = json.Marshal(args)
 		if err != nil {
-			return errors.E(err)
+			return err
 		}
 	}
 	req := &message{
@@ -185,7 +185,7 @@ func (c *Client) Call(ctx context.Context, facade string, version int, id, metho
 	req.RequestID = c.reqID
 	if err := c.conn.WriteJSON(req); err != nil {
 		c.broken = true
-		return errors.E(err)
+		return err
 	}
 	ch := make(chan struct{})
 	//nolint:staticcheck // Not sure why Martin made this a **. Ignore for now.
@@ -211,7 +211,7 @@ func (c *Client) Call(ctx context.Context, facade string, version int, id, metho
 		}
 		if resp != nil {
 			if err := json.Unmarshal([]byte((*respMsg).Response), &resp); err != nil {
-				return errors.E(err)
+				return err
 			}
 		}
 		return nil
@@ -220,7 +220,7 @@ func (c *Client) Call(ctx context.Context, facade string, version int, id, metho
 		defer c.mu.Unlock()
 		return c.err
 	case <-ctx.Done():
-		return errors.E(ctx.Err())
+		return ctx.Err()
 	}
 }
 
@@ -242,7 +242,7 @@ func (c *Client) Close() error {
 	c.closing = true
 	cm := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")
 	if err := c.conn.WriteControl(websocket.CloseMessage, cm, time.Time{}); err != nil {
-		c.err = errors.E("error closing connection", err)
+		c.err = errors.Wrap(err).WithMessage("error closing connection")
 		// If sending the close message failed then tear down the
 		// connection. Note that we don't need to clear up any
 		// outstanding messages here as the receiver will error and

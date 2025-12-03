@@ -16,7 +16,7 @@ import (
 func (d *Database) AddController(ctx context.Context, controller *dbmodel.Controller) (err error) {
 	const op = "db.AddController"
 	if err := d.ready(); err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
@@ -26,7 +26,7 @@ func (d *Database) AddController(ctx context.Context, controller *dbmodel.Contro
 	db := d.DB.WithContext(ctx)
 
 	if err := db.Create(controller).Error; err != nil {
-		return errors.E(dbError(err))
+		return dbError(err)
 	}
 	return nil
 }
@@ -36,7 +36,7 @@ func (d *Database) AddController(ctx context.Context, controller *dbmodel.Contro
 func (d *Database) GetController(ctx context.Context, controller *dbmodel.Controller) (err error) {
 	const op = "db.GetController"
 	if err := d.ready(); err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
@@ -51,15 +51,15 @@ func (d *Database) GetController(ctx context.Context, controller *dbmodel.Contro
 	case controller.Name != "":
 		db = db.Where("name = ?", controller.Name)
 	default:
-		return errors.E(errors.CodeBadRequest, "controller UUID or name must be provided")
+		return errors.New("controller UUID or name must be provided").WithCode(errors.CodeBadRequest)
 	}
 	db = db.Preload("CloudRegions").Preload("CloudRegions.CloudRegion").Preload("CloudRegions.CloudRegion.Cloud")
 	if err := db.First(&controller).Error; err != nil {
 		err = dbError(err)
 		if errors.ErrorCode(err) == errors.CodeNotFound {
-			return errors.E(err, "controller not found")
+			return errors.Wrap(err).WithMessage("controller not found")
 		}
-		return errors.E(err)
+		return err
 	}
 	return nil
 }
@@ -70,11 +70,11 @@ func (d *Database) UpdateController(ctx context.Context, controller *dbmodel.Con
 	const op = "db.UpdateController"
 
 	if controller.ID == 0 {
-		return errors.E(errors.CodeNotFound, `controller not found`)
+		return errors.New(`controller not found`).WithCode(errors.CodeNotFound)
 	}
 
 	if err := d.ready(); err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
@@ -84,7 +84,7 @@ func (d *Database) UpdateController(ctx context.Context, controller *dbmodel.Con
 	db := d.DB.WithContext(ctx)
 	db = db.Omit("CloudRegions").Omit("Models")
 	if err := db.Save(controller).Error; err != nil {
-		return errors.E(dbError(err))
+		return dbError(err)
 	}
 	return nil
 }
@@ -93,11 +93,11 @@ func (d *Database) UpdateController(ctx context.Context, controller *dbmodel.Con
 func (d *Database) DeleteController(ctx context.Context, controller *dbmodel.Controller) (err error) {
 	const op = "db.DeleteController"
 	if controller.ID == 0 {
-		return errors.E(errors.CodeNotFound, `controller not found`)
+		return errors.New(`controller not found`).WithCode(errors.CodeNotFound)
 	}
 
 	if err := d.ready(); err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
@@ -108,12 +108,12 @@ func (d *Database) DeleteController(ctx context.Context, controller *dbmodel.Con
 	if err := db.Delete(controller).Error; err != nil {
 		err := dbError(err)
 		if errors.ErrorCode(err) == errors.CodeNotFound {
-			return errors.E(err, "controller not found")
+			return errors.Wrap(err).WithMessage("controller not found")
 		}
-		return errors.E(err)
+		return err
 	}
 	if err := db.Select(clause.Associations).Delete(controller).Error; err != nil {
-		return errors.E(err)
+		return err
 	}
 	return nil
 }
@@ -125,7 +125,7 @@ func (d *Database) ForEachController(ctx context.Context, f func(*dbmodel.Contro
 	const op = "db.ForEachController"
 
 	if err := d.ready(); err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
@@ -137,7 +137,7 @@ func (d *Database) ForEachController(ctx context.Context, f func(*dbmodel.Contro
 
 	var controllers []dbmodel.Controller
 	if err := db.Order("name asc").Find(&controllers).Error; err != nil {
-		return errors.E(dbError(err))
+		return dbError(err)
 	}
 	for _, c := range controllers {
 		if err := f(&c); err != nil {
@@ -155,7 +155,7 @@ func (d *Database) ForEachControllerModel(ctx context.Context, ctl *dbmodel.Cont
 	const op = "db.ForEachControllerModel"
 
 	if err := d.ready(); err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
@@ -165,7 +165,7 @@ func (d *Database) ForEachControllerModel(ctx context.Context, ctl *dbmodel.Cont
 	var models []dbmodel.Model
 	db := d.DB.WithContext(ctx)
 	if err := db.Model(ctl).Association("Models").Find(&models); err != nil {
-		return errors.E(dbError(err))
+		return dbError(err)
 	}
 	for _, m := range models {
 		if err := f(&m); err != nil {

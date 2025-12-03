@@ -17,7 +17,7 @@ import (
 func (d *Database) SetCloudCredential(ctx context.Context, cred *dbmodel.CloudCredential) (err error) {
 	const op = "db.SetCloudCredential"
 	if err := d.ready(); err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
@@ -25,7 +25,7 @@ func (d *Database) SetCloudCredential(ctx context.Context, cred *dbmodel.CloudCr
 	defer servermon.ErrorCounter(servermon.DBQueryErrorCount, &err, op)
 
 	if cred.CloudName == "" || cred.OwnerIdentityName == "" || cred.Name == "" {
-		return errors.E(errors.CodeBadRequest, fmt.Sprintf("invalid cloudcredential tag %q", cred.CloudName+"/"+cred.OwnerIdentityName+"/"+cred.Name))
+		return errors.New("").WithCode(errors.CodeBadRequest).WithMessagef("invalid cloudcredential tag %q", cred.CloudName+"/"+cred.OwnerIdentityName+"/"+cred.Name)
 	}
 
 	db := d.DB.WithContext(ctx)
@@ -37,7 +37,7 @@ func (d *Database) SetCloudCredential(ctx context.Context, cred *dbmodel.CloudCr
 		},
 		DoUpdates: clause.AssignmentColumns([]string{"auth_type", "label", "valid"}),
 	}).Create(&cred).Error; err != nil {
-		return errors.E(dbError(err))
+		return dbError(err)
 	}
 	return nil
 }
@@ -47,7 +47,7 @@ func (d *Database) SetCloudCredential(ctx context.Context, cred *dbmodel.CloudCr
 func (d *Database) GetCloudCredential(ctx context.Context, cred *dbmodel.CloudCredential) (err error) {
 	const op = "db.GetCloudCredential"
 	if err := d.ready(); err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
@@ -55,7 +55,7 @@ func (d *Database) GetCloudCredential(ctx context.Context, cred *dbmodel.CloudCr
 	defer servermon.ErrorCounter(servermon.DBQueryErrorCount, &err, op)
 
 	if cred.CloudName == "" || cred.OwnerIdentityName == "" || cred.Name == "" {
-		return errors.E(errors.CodeNotFound, fmt.Sprintf("cloudcredential %q not found", cred.CloudName+"/"+cred.OwnerIdentityName+"/"+cred.Name))
+		return errors.New("").WithCode(errors.CodeNotFound).WithMessagef("cloudcredential %q not found", cred.CloudName+"/"+cred.OwnerIdentityName+"/"+cred.Name)
 	}
 	db := d.DB.WithContext(ctx)
 	db = db.Preload("Cloud")
@@ -63,9 +63,9 @@ func (d *Database) GetCloudCredential(ctx context.Context, cred *dbmodel.CloudCr
 	if err := db.Where("cloud_name = ? AND owner_identity_name = ? AND name = ?", cred.CloudName, cred.OwnerIdentityName, cred.Name).First(&cred).Error; err != nil {
 		err := dbError(err)
 		if errors.ErrorCode(err) == errors.CodeNotFound {
-			return errors.E(errors.CodeNotFound, fmt.Sprintf("cloudcredential %q not found", cred.CloudName+"/"+cred.OwnerIdentityName+"/"+cred.Name), err)
+			return errors.Wrap(err).WithMessagef("cloudcredential %q not found", cred.CloudName+"/"+cred.OwnerIdentityName+"/"+cred.Name).WithCode(errors.CodeNotFound)
 		}
-		return errors.E(err)
+		return err
 	}
 	return nil
 }
@@ -78,7 +78,7 @@ func (d *Database) ForEachCloudCredential(ctx context.Context, identityName, clo
 	const op = "db.ForEachCloudCredential"
 
 	if err := d.ready(); err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
@@ -96,7 +96,7 @@ func (d *Database) ForEachCloudCredential(ctx context.Context, identityName, clo
 
 	var creds []dbmodel.CloudCredential
 	if err := db.Find(&creds).Error; err != nil {
-		return errors.E(dbError(err))
+		return dbError(err)
 	}
 	for _, c := range creds {
 		if err := f(&c); err != nil {
@@ -112,7 +112,7 @@ func (d *Database) DeleteCloudCredential(ctx context.Context, cred *dbmodel.Clou
 	const op = "db.DeleteCloudCredential"
 
 	if err := d.ready(); err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
@@ -122,7 +122,7 @@ func (d *Database) DeleteCloudCredential(ctx context.Context, cred *dbmodel.Clou
 	db := d.DB.WithContext(ctx)
 	if err := db.Delete(cred).Error; err != nil {
 		err = dbError(err)
-		return errors.E(err)
+		return err
 	}
 	return nil
 }

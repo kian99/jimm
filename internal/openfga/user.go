@@ -39,7 +39,7 @@ type User struct {
 func (u *User) IsAllowedAddModelToController(ctx context.Context, resource names.ControllerTag) (bool, error) {
 	allowed, err := checkRelation(ctx, u, resource, ofganames.CanAddModelRelation)
 	if err != nil {
-		return false, errors.E(err)
+		return false, err
 	}
 	return allowed, nil
 }
@@ -49,7 +49,7 @@ func (u *User) IsAllowedAddModelToController(ctx context.Context, resource names
 func (u *User) IsAllowedAddModelToCloud(ctx context.Context, resource names.CloudTag) (bool, error) {
 	allowed, err := checkRelation(ctx, u, resource, ofganames.CanAddModelRelation)
 	if err != nil {
-		return false, errors.E(err)
+		return false, err
 	}
 	return allowed, nil
 }
@@ -58,7 +58,7 @@ func (u *User) IsAllowedAddModelToCloud(ctx context.Context, resource names.Clou
 func (u *User) IsApplicationOfferConsumer(ctx context.Context, resource names.ApplicationOfferTag) (bool, error) {
 	isConsumer, err := checkRelation(ctx, u, resource, ofganames.ConsumerRelation)
 	if err != nil {
-		return false, errors.E(err)
+		return false, err
 	}
 	return isConsumer, nil
 }
@@ -67,7 +67,7 @@ func (u *User) IsApplicationOfferConsumer(ctx context.Context, resource names.Ap
 func (u *User) IsApplicationOfferReader(ctx context.Context, resource names.ApplicationOfferTag) (bool, error) {
 	isReader, err := checkRelation(ctx, u, resource, ofganames.ReaderRelation)
 	if err != nil {
-		return false, errors.E(err)
+		return false, err
 	}
 	return isReader, nil
 }
@@ -76,7 +76,7 @@ func (u *User) IsApplicationOfferReader(ctx context.Context, resource names.Appl
 func (u *User) IsModelReader(ctx context.Context, resource names.ModelTag) (bool, error) {
 	isReader, err := checkRelation(ctx, u, resource, ofganames.ReaderRelation)
 	if err != nil {
-		return false, errors.E(err)
+		return false, err
 	}
 	return isReader, nil
 }
@@ -85,7 +85,7 @@ func (u *User) IsModelReader(ctx context.Context, resource names.ModelTag) (bool
 func (u *User) IsModelWriter(ctx context.Context, resource names.ModelTag) (bool, error) {
 	isWriter, err := checkRelation(ctx, u, resource, ofganames.WriterRelation)
 	if err != nil {
-		return false, errors.E(err)
+		return false, err
 	}
 	return isWriter, nil
 }
@@ -94,7 +94,7 @@ func (u *User) IsModelWriter(ctx context.Context, resource names.ModelTag) (bool
 func (u *User) IsModelAdmin(ctx context.Context, resource names.ModelTag) (bool, error) {
 	isAdmin, err := checkRelation(ctx, u, resource, ofganames.AdministratorRelation)
 	if err != nil {
-		return false, errors.E(err)
+		return false, err
 	}
 	return isAdmin, nil
 }
@@ -103,7 +103,7 @@ func (u *User) IsModelAdmin(ctx context.Context, resource names.ModelTag) (bool,
 func (u *User) HasModelRelation(ctx context.Context, resource names.ModelTag, relation Relation) (bool, error) {
 	hasRelation, err := checkRelation(ctx, u, resource, relation)
 	if err != nil {
-		return false, errors.E(err)
+		return false, err
 	}
 	return hasRelation, nil
 }
@@ -294,7 +294,7 @@ func (u *User) ListApplicationOffers(ctx context.Context, relation ofga.Relation
 // CheckPermission returns an Unauthorized error if user is not allowed specified permission to the resource.
 func (u *User) CheckPermission(ctx context.Context, resourceTag string, permission string) error {
 	if u.client == nil {
-		return errors.E(errors.CodeUnauthorized, "cannot check permission")
+		return errors.New("cannot check permission").WithCode(errors.CodeUnauthorized)
 	}
 	resource, err := names.ParseTag(resourceTag)
 	if err != nil {
@@ -329,7 +329,7 @@ func (u *User) CheckPermission(ctx context.Context, resourceTag string, permissi
 	}
 
 	if !allowed {
-		return errors.E(errors.CodeUnauthorized, fmt.Sprintf("user %q not allowed %q to %q", u.Name, permission, resourceTag))
+		return errors.New("").WithCode(errors.CodeUnauthorized).WithMessagef("user %q not allowed %q to %q", u.Name, permission, resourceTag)
 	}
 	return nil
 }
@@ -353,7 +353,7 @@ func checkRelation[T ofganames.ResourceTagger](ctx context.Context, u *User, res
 		true,
 	)
 	if err != nil {
-		return false, errors.E(err)
+		return false, err
 	}
 
 	return isAllowed, nil
@@ -376,7 +376,7 @@ func CheckRelation(ctx context.Context, u *User, resource names.Tag, relation Re
 		true,
 	)
 	if err != nil {
-		return false, errors.E(err)
+		return false, err
 	}
 
 	return isAllowed, nil
@@ -393,7 +393,7 @@ func IsAdministrator[T administratorT](ctx context.Context, u *User, resource T)
 			zap.String("user", u.Name),
 			zap.String("resource", resource.String()),
 		)
-		return false, errors.E(err)
+		return false, err
 	}
 	if isAdmin {
 		zapctx.Debug(
@@ -426,7 +426,7 @@ func unsetMultipleResourceAccesses[T ofganames.ResourceTagger](ctx context.Conte
 		}, pageSize, lastContinuationToken)
 
 		if err != nil {
-			return errors.E(err, "failed to retrieve existing relations")
+			return errors.Wrap(err).WithMessage("failed to retrieve existing relations")
 		}
 
 		for _, timestampedTuple := range timestampedTuples {
@@ -453,7 +453,7 @@ func unsetMultipleResourceAccesses[T ofganames.ResourceTagger](ctx context.Conte
 
 	err := user.client.RemoveRelation(ctx, tuplesToRemove...)
 	if err != nil {
-		return errors.E(err, "failed to remove relations")
+		return errors.Wrap(err).WithMessage("failed to remove relations")
 	}
 	return nil
 }

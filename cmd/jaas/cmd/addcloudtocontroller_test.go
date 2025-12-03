@@ -155,7 +155,7 @@ clouds:
 		}, {
 			about: "Add existing cloud to controller where existing cloud is not found",
 			cloudByNameFunc: func(cloudName string) (*cloud.Cloud, error) {
-				return nil, errors.E("not found")
+				return nil, errors.New("not found")
 			},
 			force:             false,
 			expectedCloudName: "test-cloud",

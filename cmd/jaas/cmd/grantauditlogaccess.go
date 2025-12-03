@@ -64,11 +64,11 @@ func (c *grantAuditLogAccessCommand) SetFlags(f *gnuflag.FlagSet) {
 // Init implements the cmd.Command interface.
 func (c *grantAuditLogAccessCommand) Init(args []string) error {
 	if len(args) == 0 {
-		return errors.E("missing username")
+		return errors.New("missing username")
 	}
 	c.username, args = args[0], args[1:]
 	if len(args) > 0 {
-		return errors.E("unknown arguments")
+		return errors.New("unknown arguments")
 	}
 	return nil
 }
@@ -77,7 +77,7 @@ func (c *grantAuditLogAccessCommand) Init(args []string) error {
 func (c *grantAuditLogAccessCommand) Run(ctxt *cmd.Context) error {
 	currentController, err := c.store.CurrentController()
 	if err != nil {
-		return errors.E(err, "could not determine controller")
+		return errors.Wrap(err).WithMessage("could not determine controller")
 	}
 
 	userTag := names.NewUserTag(c.username)
@@ -91,7 +91,7 @@ func (c *grantAuditLogAccessCommand) Run(ctxt *cmd.Context) error {
 		UserTag: userTag.String(),
 	})
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	return nil

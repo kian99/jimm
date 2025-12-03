@@ -112,16 +112,16 @@ type ProxyHelpers struct {
 func ProxySockets(ctx context.Context, helpers ProxyHelpers) error {
 
 	if helpers.ConnectController == nil {
-		return errors.E("missing controller connect function")
+		return errors.New("missing controller connect function")
 	}
 	if helpers.AuditLog == nil {
-		return errors.E("missing audit log function")
+		return errors.New("missing audit log function")
 	}
 	if helpers.LoginService == nil {
-		return errors.E("missing login service function")
+		return errors.New("missing login service function")
 	}
 	if helpers.RedirectInfo == nil {
-		return errors.E("missing redirect info function")
+		return errors.New("missing redirect info function")
 	}
 	errChan := make(chan error, 2)
 	msgInFlight := inflightMsgs{messages: make(map[uint64]*message)}
@@ -154,7 +154,7 @@ func ProxySockets(ctx context.Context, helpers ProxyHelpers) error {
 			zapctx.Debug(ctx, "Proxy error", zap.Error(err))
 		}
 	case <-ctx.Done():
-		err = errors.E("Context cancelled")
+		err = errors.New("Context cancelled")
 		zapctx.Debug(ctx, "Context cancelled")
 	}
 	// Close the client connection to ensure everything is cleaned up.
@@ -328,14 +328,14 @@ func (p *modelProxy) auditLogMessage(msg *message, isResponse bool) error {
 		if msg.Response != nil {
 			err := json.Unmarshal(msg.Response, &allErrors)
 			if err != nil {
-				return errors.E(fmt.Errorf("failed to unmarshal message response: %w", err))
+				return errors.Newf("failed to unmarshal message response: %w", err)
 			}
 		}
 		singleError := jujuparams.ErrorResult{Error: &jujuparams.Error{Message: msg.Error, Code: msg.ErrorCode, Info: msg.ErrorInfo}}
 		allErrors.Results = append(allErrors.Results, singleError)
 		jsonErr, err := json.Marshal(allErrors)
 		if err != nil {
-			return errors.E(err, "failed to marshal all errors")
+			return errors.Wrap(err).WithMessage("failed to marshal all errors")
 		}
 		ale.Errors = jsonErr
 	} else {
@@ -439,7 +439,7 @@ func (p *clientProxy) makeControllerConnection(ctx context.Context) error {
 	p.connectController.Do(func() {
 		connWithMetadata, err := p.createControllerConn(ctx)
 		if err != nil {
-			createConnErr = errors.E(err)
+			createConnErr = err
 			return
 		}
 
@@ -594,7 +594,7 @@ func checkPermissionsRequired(ctx context.Context, msg *message) (map[string]any
 			for k, v := range e.Error.Info {
 				accessLevel, ok := v.(string)
 				if !ok {
-					return nil, errors.E("unknown permission level")
+					return nil, errors.New("unknown permission level")
 				}
 				if permissionMap == nil {
 					permissionMap = make(map[string]any)
@@ -613,11 +613,11 @@ func checkPermissionsRequired(ctx context.Context, msg *message) (map[string]any
 func (p *controllerProxy) redoLogin(ctx context.Context, permissions map[string]any) error {
 
 	if p.anonymousLogin {
-		return errors.E(errors.CodeUnauthorized, "Anonymous login does not support re-authentication")
+		return errors.New("Anonymous login does not support re-authentication").WithCode(errors.CodeUnauthorized)
 	}
 	loginMsg := p.msgs.getLoginMessage()
 	if loginMsg == nil {
-		return errors.E(errors.CodeUnauthorized, "Haven't received login yet")
+		return errors.New("Haven't received login yet").WithCode(errors.CodeUnauthorized)
 	}
 	err := addJWT(ctx, loginMsg, permissions, p.tokenGen)
 	if err != nil {
@@ -635,16 +635,16 @@ func addJWT(ctx context.Context, msg *message, permissions map[string]interface{
 
 	// First we unmarshal the existing LoginRequest.
 	if msg == nil {
-		return errors.E("nil messsage")
+		return errors.New("nil messsage")
 	}
 	var lr jujuparams.LoginRequest
 	if err := json.Unmarshal(msg.Params, &lr); err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	jwt, err := tokenGen.MakeToken(ctx, permissions)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	jwtString := base64.StdEncoding.EncodeToString(jwt)
@@ -653,7 +653,7 @@ func addJWT(ctx context.Context, msg *message, permissions map[string]interface{
 	// Marshal it again to JSON.
 	data, err := json.Marshal(lr)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	// And add it to the message.
 	msg.Params = data
@@ -813,7 +813,7 @@ func (p *clientProxy) handleLegacyLogin(ctx context.Context, msg *message) (*mes
 			// return the client's login message verbatim to the controller.
 			return msg, nil
 		}
-		return nil, errors.E("JIMM does not support login from old clients", errors.CodeNotSupported)
+		return nil, errors.New("JIMM does not support login from old clients").WithCode(errors.CodeNotSupported)
 	case names.ModelTag, names.MachineTag, names.UnitTag:
 		zapctx.Debug(ctx, "Legacy login request from agent", zap.String("tag", tag.String()))
 
@@ -828,11 +828,7 @@ func (p *clientProxy) handleLegacyLogin(ctx context.Context, msg *message) (*mes
 			Servers: redirectInfo.Addresses,
 			CACert:  redirectInfo.CACert,
 		}.AsMap()
-		errRedirect := errors.E(
-			errors.CodeRedirect,
-			"redirection to alternative server required",
-			info,
-		)
+		errRedirect := errors.New("redirection to alternative server required").WithCode(errors.CodeRedirect).WithInfo(info)
 
 		zapctx.Debug(ctx, "Redirecting agent to controller", zap.Any("servers", redirectInfo.Addresses))
 		return nil, errRedirect

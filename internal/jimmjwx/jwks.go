@@ -96,7 +96,7 @@ func rotateJWKS(ctx context.Context, credStore CredentialStore, initialExpiryTim
 			if jwksErr := credStore.CleanupJWKS(ctx); jwksErr != nil {
 				zapctx.Error(ctx, "failed to cleanup jwks", zap.Error(jwksErr))
 			}
-			return errors.E(fmt.Errorf("failed to put JWKS: %w", err))
+			return errors.Newf("failed to put JWKS: %w", err)
 		}
 	} else {
 		// Check it has expired.
@@ -109,7 +109,7 @@ func rotateJWKS(ctx context.Context, credStore CredentialStore, initialExpiryTim
 				if jwksErr := credStore.CleanupJWKS(ctx); jwksErr != nil {
 					zapctx.Error(ctx, "failed to cleanup jwks", zap.Error(jwksErr))
 				}
-				return errors.E(fmt.Errorf("failed to put JWKS: %w", err))
+				return errors.Newf("failed to put JWKS: %w", err)
 			}
 			zapctx.Debug(ctx, "set a new JWKS", zap.String("expiry", expires.String()))
 		}
@@ -133,7 +133,7 @@ func (jwks *JWKSService) StartJWKSRotator(ctx context.Context, checkRotateRequir
 	credStore := jwks.credentialStore
 
 	if err := rotateJWKS(ctx, credStore, initialRotateRequiredTime); err != nil {
-		return errors.E(fmt.Errorf("rotate jwks: %w", err))
+		return errors.Newf("rotate jwks: %w", err)
 	}
 
 	// The rotation method is as follows, if an expiry is not present, we know
@@ -168,7 +168,7 @@ func generateJWK(ctx context.Context) (jwk.Set, []byte, error) {
 	// and accept any negligible wire cost.
 	keySet, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
-		return nil, nil, errors.E(err)
+		return nil, nil, err
 	}
 
 	privateKeyPEM := pem.EncodeToMemory(
@@ -181,32 +181,32 @@ func generateJWK(ctx context.Context) (jwk.Set, []byte, error) {
 	// We also use the same methodology of generating UUIDs for our KID
 	kid, err := uuid.NewRandom()
 	if err != nil {
-		return nil, nil, errors.E(err)
+		return nil, nil, err
 	}
 
 	jwks, err := jwk.FromRaw(keySet.PublicKey)
 	if err != nil {
-		return nil, nil, errors.E(err)
+		return nil, nil, err
 	}
 	err = jwks.Set(jwk.KeyIDKey, kid.String())
 	if err != nil {
-		return nil, nil, errors.E(err)
+		return nil, nil, err
 	}
 
 	err = jwks.Set(jwk.KeyUsageKey, "sig") // Couldn't find const for this...
 	if err != nil {
-		return nil, nil, errors.E(err)
+		return nil, nil, err
 	}
 
 	err = jwks.Set(jwk.AlgorithmKey, jwa.RS256)
 	if err != nil {
-		return nil, nil, errors.E(err)
+		return nil, nil, err
 	}
 
 	ks := jwk.NewSet()
 	err = ks.AddKey(jwks)
 	if err != nil {
-		return nil, nil, errors.E(err)
+		return nil, nil, err
 	}
 
 	return ks, privateKeyPEM, nil

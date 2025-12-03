@@ -70,22 +70,22 @@ func (c *upgradeToCommand) SetFlags(f *gnuflag.FlagSet) {
 // Init implements the cmd.Command interface.
 func (c *upgradeToCommand) Init(args []string) error {
 	if len(args) < 2 {
-		return errors.E("missing required arguments: version and model UUID")
+		return errors.New("missing required arguments: version and model UUID")
 	}
 	if len(args) > 2 {
-		return errors.E("too many arguments")
+		return errors.New("too many arguments")
 	}
 	c.version = args[0]
 	c.modelUUID = args[1]
 
 	// Validate version format
 	if _, err := jujuversion.Parse(c.version); err != nil {
-		return errors.E("invalid version format: " + c.version)
+		return errors.New("invalid version format: " + c.version)
 	}
 
 	// Validate model UUID format
 	if !names.IsValidModel(c.modelUUID) {
-		return errors.E("invalid model UUID: " + c.modelUUID)
+		return errors.New("invalid model UUID: " + c.modelUUID)
 	}
 
 	return nil
@@ -95,7 +95,7 @@ func (c *upgradeToCommand) Init(args []string) error {
 func (c *upgradeToCommand) Run(ctxt *cmd.Context) error {
 	client, err := c.jimmAPIFunc()
 	if err != nil {
-		return errors.E(err, "failed to create JIMM client")
+		return errors.Wrap(err).WithMessage("failed to create JIMM client")
 	}
 	defer client.Close()
 
@@ -105,12 +105,12 @@ func (c *upgradeToCommand) Run(ctxt *cmd.Context) error {
 		ModelTag:                modelTag.String(),
 	})
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	if !resp.Success {
 		err = c.out.Write(ctxt, resp.Error)
 		if err != nil {
-			return errors.E(err)
+			return err
 		}
 	}
 	return nil
@@ -120,7 +120,7 @@ func (c *upgradeToCommand) Run(ctxt *cmd.Context) error {
 func (c *upgradeToCommand) newClient() (JIMMAPI, error) {
 	currentController, err := c.store.CurrentController()
 	if err != nil {
-		return nil, errors.E(err, "could not determine controller")
+		return nil, errors.Wrap(err).WithMessage("could not determine controller")
 	}
 
 	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)

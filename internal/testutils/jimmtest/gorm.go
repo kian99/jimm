@@ -172,7 +172,7 @@ func createDatabaseFromTemplate(suggestedName string, templateName string) (stri
 
 	u, err := url.Parse(dsn)
 	if err != nil {
-		return "", "", errors.E("error parsing DSN as a URI: %s", err)
+		return "", "", errors.Wrap(err).WithMessage("error parsing DSN as a URI: %s")
 	}
 
 	createDatabaseMutex.Lock()
@@ -180,25 +180,25 @@ func createDatabaseFromTemplate(suggestedName string, templateName string) (stri
 
 	gdb, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		return "", "", errors.E(err, "error opening database")
+		return "", "", errors.Wrap(err).WithMessage("error opening database")
 	}
 
 	dropDatabaseCommand := fmt.Sprintf(`DROP DATABASE IF EXISTS "%s"`, databaseName)
 	if err := gdb.Exec(dropDatabaseCommand).Error; err != nil {
-		return "", "", errors.E(err, fmt.Sprintf("error dropping existing database (maybe there's an active connection like psql client): %s", databaseName))
+		return "", "", errors.Wrap(err).WithMessagef("error dropping existing database (maybe there's an active connection like psql client): %s", databaseName)
 	}
 
 	createDatabaseCommand := fmt.Sprintf(`CREATE DATABASE "%s" TEMPLATE "%s"`, databaseName, templateName)
 	if err := gdb.Exec(createDatabaseCommand).Error; err != nil {
-		return "", "", errors.E(err, fmt.Sprintf("error creating database: (%s)", databaseName))
+		return "", "", errors.Wrap(err).WithMessagef("error creating database: (%s)", databaseName)
 	}
 
 	sqlDB, err := gdb.DB()
 	if err != nil {
-		return "", "", errors.E(err, "failed to get the internal DB object")
+		return "", "", errors.Wrap(err).WithMessage("failed to get the internal DB object")
 	}
 	if err := sqlDB.Close(); err != nil {
-		return "", "", errors.E(err, "failed to close database connection")
+		return "", "", errors.Wrap(err).WithMessage("failed to close database connection")
 	}
 
 	u.Path = databaseName
@@ -216,17 +216,17 @@ func DeleteDatabase(databaseName string) (err error) {
 
 	gdb, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		return errors.E(fmt.Sprintf("error opening database: %s", err))
+		return errors.New("").WithMessagef("error opening database: %s", err)
 	}
 	db, err := gdb.DB()
 	if err != nil {
-		return errors.E(fmt.Sprintf("error getting db: %s", err))
+		return errors.New("").WithMessagef("error getting db: %s", err)
 	}
 	defer func() { err = db.Close() }()
 
 	dropDatabaseCommand := fmt.Sprintf(`DROP DATABASE IF EXISTS "%s"`, databaseName)
 	if err := gdb.Exec(dropDatabaseCommand).Error; err != nil {
-		return errors.E(fmt.Sprintf("failed to delete database (%s): %s", databaseName, err))
+		return errors.New("").WithMessagef("failed to delete database (%s): %s", databaseName, err)
 	}
 	return nil
 }
@@ -245,7 +245,7 @@ func createEmptyDatabase(suggestedName string) (string, string, error) {
 
 	u, err := url.Parse(dsn)
 	if err != nil {
-		return "", "", errors.E("error parsing DSN as a URI: %s", err)
+		return "", "", errors.Wrap(err).WithMessage("error parsing DSN as a URI: %s")
 	}
 
 	createDatabaseMutex.Lock()
@@ -253,25 +253,25 @@ func createEmptyDatabase(suggestedName string) (string, string, error) {
 
 	gdb, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		return "", "", errors.E(err, "error opening database")
+		return "", "", errors.Wrap(err).WithMessage("error opening database")
 	}
 
 	dropDatabaseCommand := fmt.Sprintf(`DROP DATABASE IF EXISTS "%s"`, databaseName)
 	if err := gdb.Exec(dropDatabaseCommand).Error; err != nil {
-		return "", "", errors.E(err, fmt.Sprintf("error dropping existing database (maybe there's an active connection like psql client): %s", databaseName))
+		return "", "", errors.Wrap(err).WithMessagef("error dropping existing database (maybe there's an active connection like psql client): %s", databaseName)
 	}
 
 	createDatabaseCommand := fmt.Sprintf(`CREATE DATABASE "%s"`, databaseName)
 	if err := gdb.Exec(createDatabaseCommand).Error; err != nil {
-		return "", "", errors.E(err, fmt.Sprintf("error creating database: (%s)", databaseName))
+		return "", "", errors.Wrap(err).WithMessagef("error creating database: (%s)", databaseName)
 	}
 
 	sqlDB, err := gdb.DB()
 	if err != nil {
-		return "", "", errors.E(err, "failed to get the internal DB object")
+		return "", "", errors.Wrap(err).WithMessage("failed to get the internal DB object")
 	}
 	if err := sqlDB.Close(); err != nil {
-		return "", "", errors.E(err, "failed to close database connection")
+		return "", "", errors.Wrap(err).WithMessage("failed to close database connection")
 	}
 
 	u.Path = databaseName
@@ -284,26 +284,26 @@ func createTemplateDatabase() (string, string, error) {
 	suggestedName := fmt.Sprintf("jimm_template_%s", uuid.New().String()[0:8])
 	templateName, templateDSN, err := createEmptyDatabase(suggestedName)
 	if err != nil {
-		return "", "", errors.E(err, "failed to create the template database")
+		return "", "", errors.Wrap(err).WithMessage("failed to create the template database")
 	}
 
 	gdb, err := gorm.Open(postgres.Open(templateDSN), &gorm.Config{})
 	if err != nil {
-		return "", "", errors.E(err, "error opening template database")
+		return "", "", errors.Wrap(err).WithMessage("error opening template database")
 	}
 
 	database := db.Database{
 		DB: gdb,
 	}
 	if err := database.Migrate(context.Background()); err != nil {
-		return "", "", errors.E(err, "error applying migrations on template database")
+		return "", "", errors.Wrap(err).WithMessage("error applying migrations on template database")
 	}
 	sqlDB, err := gdb.DB()
 	if err != nil {
-		return "", "", errors.E(err, "failed to get the internal DB object")
+		return "", "", errors.Wrap(err).WithMessage("failed to get the internal DB object")
 	}
 	if err := sqlDB.Close(); err != nil {
-		return "", "", errors.E(err, "failed to close template database connection")
+		return "", "", errors.Wrap(err).WithMessage("failed to close template database connection")
 	}
 	return templateName, templateDSN, nil
 }
