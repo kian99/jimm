@@ -201,7 +201,7 @@ func (b *modelBuilder) WithCloudRegion(region string) *modelBuilder {
 			}
 		}
 		if len(regionControllers) == 0 {
-			b.err = errors.New("").WithCode(errors.CodeBadRequest).WithMessagef("unsupported cloud region %s/%s", b.cloud.Name, region)
+			b.err = errors.Newf("unsupported cloud region %s/%s", b.cloud.Name, region).WithCode(errors.CodeBadRequest)
 			return b
 		}
 		// shuffle controllers
@@ -374,7 +374,7 @@ func (b *modelBuilder) selectCloudRegion() error {
 
 	// if no controllers are found, we return an error
 	if len(regionControllers) == 0 {
-		return errors.New("").WithMessagef("unsupported cloud %s", b.cloud.Name)
+		return errors.Newf("unsupported cloud %s", b.cloud.Name)
 	}
 
 	// shuffle controllers according to their priority
@@ -438,7 +438,7 @@ func (b *modelBuilder) CreateControllerModel() *modelBuilder {
 
 	if b.credential != nil {
 		if err := b.updateCredential(b.ctx, api, b.credential); err != nil {
-			b.err = errors.Wrap(err).WithMessagef("failed to update cloud credential: %s", err)
+			b.err = errors.Newf("failed to update cloud credential: %w", err)
 			return b
 		}
 	}

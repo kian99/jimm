@@ -117,7 +117,7 @@ func (c *listAuditEventsCommand) Run(ctxt *cmd.Context) error {
 func formatTabular(writer io.Writer, value interface{}) error {
 	e, ok := value.(apiparams.AuditEvents)
 	if !ok {
-		return errors.New("").WithMessagef("expected value of type %T, got %T", e, value)
+		return errors.Newf("expected value of type %T, got %T", e, value)
 	}
 
 	table := uitable.New()

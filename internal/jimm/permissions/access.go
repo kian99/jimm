@@ -196,11 +196,11 @@ func (j *permissionManager) CheckPermission(ctx context.Context, user *openfga.U
 		if _, ok := cachedPerms[key]; !ok {
 			stringVal, ok := val.(string)
 			if !ok {
-				return nil, errors.New("").WithMessagef("failed to get permission assertion: expected %T, got %T", stringVal, val)
+				return nil, errors.Newf("failed to get permission assertion: expected %T, got %T", stringVal, val)
 			}
 			tag, err := names.ParseTag(key)
 			if err != nil {
-				return cachedPerms, errors.New("").WithMessagef("failed to parse tag %s", key)
+				return cachedPerms, errors.Newf("failed to parse tag %s", key)
 			}
 			relation, err := ofganames.ConvertJujuRelation(stringVal)
 			if err != nil {
@@ -211,7 +211,7 @@ func (j *permissionManager) CheckPermission(ctx context.Context, user *openfga.U
 				return cachedPerms, err
 			}
 			if !check {
-				return cachedPerms, errors.New("").WithMessagef("Missing permission for %s:%s", key, val)
+				return cachedPerms, errors.Newf("Missing permission for %s:%s", key, val)
 			}
 			cachedPerms[key] = stringVal
 		}

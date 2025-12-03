@@ -130,7 +130,7 @@ func (j *permissionManager) ToJAASTag(ctx context.Context, tag *ofganames.Tag, r
 		}
 		return tagToString(names.CloudTagKind, cloud.Name), nil
 	default:
-		return "", errors.New("").WithMessagef("unexpected tag kind: %v", tag.Kind)
+		return "", errors.Newf("unexpected tag kind: %v", tag.Kind)
 	}
 }
 
@@ -196,7 +196,7 @@ func (t *tagResolver) groupTag(ctx context.Context, db *db.Database) (*ofga.Enti
 
 	err := db.GetGroup(ctx, &entry)
 	if err != nil {
-		return nil, errors.New("").WithMessagef("group %s not found", t.trailer)
+		return nil, errors.Newf("group %s not found", t.trailer)
 	}
 
 	return ofganames.ConvertTagWithRelation(entry.ResourceTag(), t.relation), nil
@@ -236,7 +236,7 @@ func (t *tagResolver) roleTag(ctx context.Context, db *db.Database) (*ofga.Entit
 
 	err := db.GetRole(ctx, &entry)
 	if err != nil {
-		return nil, errors.New("").WithMessagef("role %s not found", t.trailer)
+		return nil, errors.Newf("role %s not found", t.trailer)
 	}
 
 	return ofganames.ConvertTagWithRelation(entry.ResourceTag(), t.relation), nil

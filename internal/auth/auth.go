@@ -223,7 +223,7 @@ func (as *AuthenticationService) AuthCodeURL() (string, string, error) {
 	b := make([]byte, 8)
 	_, err := rand.Read(b)
 	if err != nil {
-		return "", "", errors.New("").WithMessagef("failed to generate state secret: %s", err.Error())
+		return "", "", errors.Newf("failed to generate state secret: %s", err.Error())
 	}
 	state := base64.RawURLEncoding.EncodeToString(b)
 	return as.oauthConfig.AuthCodeURL(state), state, nil
@@ -576,7 +576,7 @@ func (as *AuthenticationService) Logout(ctx context.Context, w http.ResponseWrit
 
 	identityIdStr, ok := identityId.(string)
 	if !ok {
-		return errors.New("").WithMessagef("session identity key could not be parsed: expected %T, got %T", identityIdStr, identityId)
+		return errors.Newf("session identity key could not be parsed: expected %T, got %T", identityIdStr, identityId)
 	}
 
 	if err := as.deleteSession(session, w, req); err != nil {
@@ -628,7 +628,7 @@ func (as *AuthenticationService) validateAndUpdateAccessToken(ctx context.Contex
 
 	emailStr, ok := email.(string)
 	if !ok {
-		return errors.New("").WithMessagef("failed to cast email: got %T, expected %T", email, emailStr)
+		return errors.Newf("failed to cast email: got %T, expected %T", email, emailStr)
 	}
 
 	db := as.db

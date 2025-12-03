@@ -175,13 +175,13 @@ func (j *JujuManager) determineHostCloudRegion(ctx context.Context, hostCloudReg
 			Name: hostCloudRegion,
 		}
 		if err := j.Database.GetCloud(ctx, &cl); err != nil {
-			return nil, errors.New("").WithMessagef("unable to find host cloud %q", hostCloudRegion).WithCode(errors.CodeNotFound)
+			return nil, errors.Newf("unable to find host cloud %q", hostCloudRegion).WithCode(errors.CodeNotFound)
 		}
 		if len(cl.Regions) > 1 {
-			return nil, errors.New("").WithMessagef("unable to determine a unique region for host cloud %q - consider specifying the host cloud region", hostCloudRegion).WithCode(errors.CodeBadRequest)
+			return nil, errors.Newf("unable to determine a unique region for host cloud %q - consider specifying the host cloud region", hostCloudRegion).WithCode(errors.CodeBadRequest)
 		}
 		if len(cl.Regions) == 0 {
-			return nil, errors.New("").WithMessagef("the host cloud %q does not have a valid region", hostCloudRegion).WithCode(errors.CodeBadRequest)
+			return nil, errors.Newf("the host cloud %q does not have a valid region", hostCloudRegion).WithCode(errors.CodeBadRequest)
 		}
 		return &cl.Regions[0], nil
 	}
@@ -388,7 +388,7 @@ func (j *JujuManager) doCloudAdmin(ctx context.Context, user *openfga.User, ct n
 		if len(c.Regions) > 0 {
 			zapctx.Error(ctx, "number of controllers available for cloud/region", zap.Int("controllers", len(c.Regions[0].Controllers)))
 		}
-		return errors.New("").WithMessagef("cloud administration not available for %s", ct.Id())
+		return errors.Newf("cloud administration not available for %s", ct.Id())
 	}
 	api, err := j.dial(ctx, &c.Regions[0].Controllers[0].Controller, names.ModelTag{}, nil)
 	if err != nil {

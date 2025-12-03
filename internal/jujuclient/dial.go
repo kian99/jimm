@@ -291,7 +291,7 @@ func (c *Connection) CallHighestFacadeVersion(ctx context.Context, facade string
 			return c.Call(ctx, facade, version, id, method, args, resp)
 		}
 	}
-	return errors.New("").WithMessagef("facade %v version %v not supported", facade, versions)
+	return errors.Newf("facade %v version %v not supported", facade, versions)
 }
 
 // BestFacadeVersion returns the newest version of 'objType' that this

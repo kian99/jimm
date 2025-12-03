@@ -72,7 +72,7 @@ func (j *JujuManager) Offer(ctx context.Context, user *openfga.User, offer AddAp
 	offerCheck.URL = offerURL.String()
 	err = j.Database.GetApplicationOffer(ctx, &offerCheck)
 	if err == nil {
-		return errors.New("").WithMessagef("offer %s already exists, please use a different name", offerURL.String()).WithCode(errors.CodeAlreadyExists)
+		return errors.Newf("offer %s already exists, please use a different name", offerURL.String()).WithCode(errors.CodeAlreadyExists)
 	} else if errors.ErrorCode(err) != errors.CodeNotFound {
 		// Anything besides Not Found is a problem.
 		return err

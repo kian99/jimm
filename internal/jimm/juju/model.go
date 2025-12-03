@@ -780,13 +780,13 @@ func (j *JujuManager) ListModels(ctx context.Context, user *openfga.User) ([]bas
 	// Get uuids of models the user has access to
 	uuids, err := user.ListModels(ctx, ofganames.ReaderRelation)
 	if err != nil {
-		return nil, errors.New("").WithMessagef("failed to list user models: %v", err)
+		return nil, errors.Newf("failed to list user models: %v", err)
 	}
 
 	// Get the models from the database
 	models, err := j.Database.GetModelsByUUID(ctx, uuids)
 	if err != nil {
-		return nil, errors.New("").WithMessagef("failed to get models by uuid: %v", err)
+		return nil, errors.Newf("failed to get models by uuid: %v", err)
 	}
 
 	// Create map for lookup later
@@ -835,7 +835,7 @@ func (j *JujuManager) ListModels(ctx context.Context, user *openfga.User) ([]bas
 		return nil
 	})
 	if err != nil {
-		return nil, errors.New("").WithMessagef("failed to list models: %v", err)
+		return nil, errors.Newf("failed to list models: %v", err)
 	}
 
 	return userModels, nil

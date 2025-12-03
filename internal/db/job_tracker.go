@@ -30,7 +30,7 @@ func (d *Database) AddJob(ctx context.Context, jobType string) (jobId uuid.UUID,
 
 	entry, err := dbmodel.NewJobTrackerEntry(jobType)
 	if err != nil {
-		return jobId, errors.New("").WithMessagef("failed to create new job tracker entry: %v", err)
+		return jobId, errors.Newf("failed to create new job tracker entry: %v", err)
 	}
 	if err := db.Create(entry).Error; err != nil {
 		err := dbError(err)

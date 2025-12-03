@@ -187,10 +187,10 @@ func (r *controllerRoot) AddController(ctx context.Context, req apiparams.AddCon
 			return apiparams.ControllerInfo{}, errors.Wrap(err).WithCode(errors.CodeBadRequest)
 		}
 		if host == "" {
-			return apiparams.ControllerInfo{}, errors.New("").WithMessagef("address %s: host not specified in public address", req.PublicAddress).WithCode(errors.CodeBadRequest)
+			return apiparams.ControllerInfo{}, errors.Newf("address %s: host not specified in public address", req.PublicAddress).WithCode(errors.CodeBadRequest)
 		}
 		if port == "" {
-			return apiparams.ControllerInfo{}, errors.New("").WithMessagef("address %s: port not specified in public address", req.PublicAddress).WithCode(errors.CodeBadRequest)
+			return apiparams.ControllerInfo{}, errors.Newf("address %s: port not specified in public address", req.PublicAddress).WithCode(errors.CodeBadRequest)
 		}
 	}
 
@@ -538,7 +538,7 @@ func (r *controllerRoot) PrepareModelMigration(ctx context.Context, args apipara
 	// Check each key is a valid local user and each value is a valid user and has a domain
 	for local, external := range args.UserMapping {
 		if !names.IsValidUserName(local) {
-			return resp, errors.New("").WithMessagef("%s is not a valid local user name", local)
+			return resp, errors.Newf("%s is not a valid local user name", local)
 		}
 
 		if external == "" {
@@ -548,7 +548,7 @@ func (r *controllerRoot) PrepareModelMigration(ctx context.Context, args apipara
 		}
 
 		if !names.IsValidUser(external) || !strings.Contains(external, "@") {
-			return resp, errors.New("").WithMessagef("%s is not a valid external user name", external)
+			return resp, errors.Newf("%s is not a valid external user name", external)
 		}
 	}
 

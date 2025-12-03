@@ -88,11 +88,11 @@ func (c *removeCloudFromControllerCommand) Init(args []string) error {
 	}
 	c.targetControllerName = args[0]
 	if ok := names.IsValidControllerName(c.targetControllerName); !ok {
-		return errors.New("").WithMessagef("invalid controller name %q", c.targetControllerName)
+		return errors.Newf("invalid controller name %q", c.targetControllerName)
 	}
 	c.cloudName = args[1]
 	if ok := names.IsValidCloud(c.cloudName); !ok {
-		return errors.New("").WithMessagef("invalid cloud name %q", c.cloudName)
+		return errors.Newf("invalid cloud name %q", c.cloudName)
 	}
 
 	return nil
@@ -102,7 +102,7 @@ func (c *removeCloudFromControllerCommand) Init(args []string) error {
 func (c *removeCloudFromControllerCommand) Run(ctxt *cmd.Context) error {
 	err := c.removeCloudFromController(ctxt)
 	if err != nil {
-		return errors.Wrap(err).WithMessagef("error removing cloud from controller: %v", err)
+		return errors.Newf("error removing cloud from controller: %w", err)
 	}
 
 	return nil

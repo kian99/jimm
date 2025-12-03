@@ -105,7 +105,7 @@ func getAdminCLIAccessToken() (string, error) {
 		return "", errors.Wrap(err).WithMessagef("failed to read keycloak response for admin CLI login (status-code: %d)", resp.StatusCode)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return "", errors.New("").WithMessagef("failed to login with keycloak admin CLI user (status-code: %d): %q", resp.StatusCode, string(body))
+		return "", errors.Newf("failed to login with keycloak admin CLI user (status-code: %d): %q", resp.StatusCode, string(body))
 	}
 
 	m := map[string]any{}
@@ -149,7 +149,7 @@ func getKeycloakUsersMap(adminCLIToken string) (map[string]string, error) {
 		return nil, errors.Wrap(err).WithMessagef("failed to read keycloak response for list of users (status-code: %d)", resp.StatusCode)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("").WithMessagef("failed to get users from keycloak (status-code: %d): %q", resp.StatusCode, string(body))
+		return nil, errors.Newf("failed to get users from keycloak (status-code: %d): %q", resp.StatusCode, string(body))
 	}
 
 	var raw []struct {
@@ -175,7 +175,7 @@ func getKeycloakUserId(adminCLIToken, username string) (string, error) {
 	}
 
 	if id, ok := m[username]; !ok {
-		return "", errors.New("").WithMessagef("keycloak user not found: %q", username)
+		return "", errors.Newf("keycloak user not found: %q", username)
 	} else {
 		return id, nil
 	}
@@ -221,7 +221,7 @@ func addKeycloakUser(adminCLIToken, email, username string) error {
 		return errors.Wrap(err).WithMessagef("failed to read keycloak response to add user (status-code: %d)", resp.StatusCode)
 	}
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		return errors.New("").WithMessagef("failed to add user to keycloak (status-code: %d): %q", resp.StatusCode, string(body))
+		return errors.Newf("failed to add user to keycloak (status-code: %d): %q", resp.StatusCode, string(body))
 	}
 	return nil
 }
@@ -264,7 +264,7 @@ func setKeycloakUserPassword(adminCLIToken, id, password string) error {
 		return errors.Wrap(err).WithMessagef("failed to read keycloak response to set user password (status-code: %d)", resp.StatusCode)
 	}
 	if resp.StatusCode != http.StatusNoContent {
-		return errors.New("").WithMessagef("failed to set keycloak user password (status-code: %d): %q", resp.StatusCode, string(body))
+		return errors.Newf("failed to set keycloak user password (status-code: %d): %q", resp.StatusCode, string(body))
 	}
 	return nil
 }

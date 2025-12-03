@@ -1364,7 +1364,7 @@ func assertConfig(config map[string]interface{}, fnc func(context.Context, *juju
 		}
 		for k, v := range args.Config {
 			if config[k] != v {
-				return errors.New("").WithMessagef("config value mismatch for key %s: %s -> %s", k, config[k], v)
+				return errors.Newf("config value mismatch for key %s: %s -> %s", k, config[k], v)
 			}
 		}
 		return fnc(ctx, args, mi)

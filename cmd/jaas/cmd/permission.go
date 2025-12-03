@@ -562,7 +562,7 @@ func fetchRelations(client *api.Client, params apiparams.ListRelationshipTuplesR
 	for {
 		response, err := client.ListRelationshipTuples(&params)
 		if err != nil {
-			return nil, errors.New("").WithMessagef("failed to fetch list of relationship tuples: %s", err.Error())
+			return nil, errors.Newf("failed to fetch list of relationship tuples: %s", err.Error())
 		}
 		tuples = append(tuples, response.Tuples...)
 
@@ -576,7 +576,7 @@ func fetchRelations(client *api.Client, params apiparams.ListRelationshipTuplesR
 func formatRelationsTabular(writer io.Writer, value interface{}) error {
 	resp, ok := value.(*apiparams.ListRelationshipTuplesResponse)
 	if !ok {
-		return errors.New("").WithMessagef("expected value of type %T, got %T", resp, value)
+		return errors.Newf("expected value of type %T, got %T", resp, value)
 	}
 
 	table := uitable.New()

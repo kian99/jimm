@@ -105,11 +105,11 @@ func (c *addCloudToControllerCommand) Init(args []string) error {
 	}
 	c.dstControllerName = args[0]
 	if ok := names.IsValidControllerName(c.dstControllerName); !ok {
-		return errors.New("").WithMessagef("invalid controller name %q", c.dstControllerName)
+		return errors.Newf("invalid controller name %q", c.dstControllerName)
 	}
 	c.cloudName = args[1]
 	if ok := names.IsValidCloud(c.cloudName); !ok {
-		return errors.New("").WithMessagef("invalid cloud name %q", c.cloudName)
+		return errors.Newf("invalid cloud name %q", c.cloudName)
 	}
 
 	return nil
@@ -122,7 +122,7 @@ func (c *addCloudToControllerCommand) Run(ctxt *cmd.Context) error {
 	if c.cloudDefinitionFile != "" {
 		newCloud, err = c.readCloudFromFile(ctxt)
 		if err != nil {
-			return errors.Wrap(err).WithMessagef("error reading cloud from file: %v", err)
+			return errors.Newf("error reading cloud from file: %w", err)
 		}
 	} else {
 		// It's possible that the user wants to add an existing cloud to a controller,
@@ -140,7 +140,7 @@ func (c *addCloudToControllerCommand) Run(ctxt *cmd.Context) error {
 
 	err = c.addCloudToController(ctxt, newCloud)
 	if err != nil {
-		return errors.Wrap(err).WithMessagef("error adding cloud to controller: %v", err)
+		return errors.Newf("error adding cloud to controller: %w", err)
 	}
 
 	return nil

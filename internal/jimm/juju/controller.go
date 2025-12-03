@@ -403,7 +403,7 @@ func (m *modelImporter) fetchModelInfo(ctx context.Context, controllerName strin
 
 	m.originalOwner, err = names.ParseUserTag(m.modelInfo.OwnerTag)
 	if err != nil {
-		return errors.New("").WithMessagef("invalid username %s from original model owner", m.modelInfo.OwnerTag)
+		return errors.Newf("invalid username %s from original model owner", m.modelInfo.OwnerTag)
 	}
 
 	m.offersToAdd, err = api.ListApplicationOffers(ctx, []jujuparams.OfferFilter{

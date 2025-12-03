@@ -150,7 +150,7 @@ func (p logPoller) watchJobLogs() error {
 				return errors.Wrap(err).WithMessage("failed to write job pending message")
 			}
 		default:
-			return errors.New("").WithMessagef("unknown job status: %s", response.Status)
+			return errors.Newf("unknown job status: %s", response.Status)
 		}
 		if !p.follow {
 			return nil

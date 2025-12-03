@@ -220,11 +220,11 @@ func (b *bootstrapManager) WaitForJobCompletion(ctx context.Context, jobId uuid.
 			case params.StatusSuccessful:
 				return nil
 			case params.StatusFailed:
-				return errors.New("").WithMessagef("bootstrap job failed: %s", job.Error)
+				return errors.Newf("bootstrap job failed: %s", job.Error)
 			case params.StatusRunning, params.StatusPending:
 				continue
 			default:
-				return errors.New("").WithMessagef("unexpected job status: %s", job.Status)
+				return errors.Newf("unexpected job status: %s", job.Status)
 			}
 		case <-ctx.Done():
 			return ctx.Err()

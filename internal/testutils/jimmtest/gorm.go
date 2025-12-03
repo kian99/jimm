@@ -216,17 +216,17 @@ func DeleteDatabase(databaseName string) (err error) {
 
 	gdb, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		return errors.New("").WithMessagef("error opening database: %s", err)
+		return errors.Newf("error opening database: %s", err)
 	}
 	db, err := gdb.DB()
 	if err != nil {
-		return errors.New("").WithMessagef("error getting db: %s", err)
+		return errors.Newf("error getting db: %s", err)
 	}
 	defer func() { err = db.Close() }()
 
 	dropDatabaseCommand := fmt.Sprintf(`DROP DATABASE IF EXISTS "%s"`, databaseName)
 	if err := gdb.Exec(dropDatabaseCommand).Error; err != nil {
-		return errors.New("").WithMessagef("failed to delete database (%s): %s", databaseName, err)
+		return errors.Newf("failed to delete database (%s): %s", databaseName, err)
 	}
 	return nil
 }
