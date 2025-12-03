@@ -793,7 +793,7 @@ func TestImportModel(t *testing.T) {
 		modelUUID:      "00000002-0000-0000-0000-000000000001",
 		jimmAdmin:      true,
 		modelInfo: func(_ context.Context, info *jujuparams.ModelInfo) error {
-			return errors.E(errors.CodeNotFound, "model not found")
+			return errors.New("model not found").WithCode(errors.CodeNotFound)
 		},
 		expectedError: "model not found",
 	}, {
@@ -1144,7 +1144,7 @@ func TestUpdateMigratedModel(t *testing.T) {
 		model:            names.NewModelTag("00000002-0000-0000-0000-000000000002"),
 		targetController: "controller-2",
 		modelInfo: func(context.Context, *jujuparams.ModelInfo) error {
-			return errors.E("an error")
+			return errors.New("an error")
 		},
 		expectedError: "an error",
 		jimmAdmin:     true,
@@ -1338,7 +1338,7 @@ func TestInitiateMigration(t *testing.T) {
 			},
 		},
 		initiateMigrationResults: []result{{
-			err: errors.E("mocked error"),
+			err: errors.New("mocked error"),
 		}},
 		expectedError: "mocked error",
 	}, {
@@ -1524,7 +1524,7 @@ func (c *testControllerClient) InitiateMigration(spec controller.MigrationSpec) 
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if len(c.initiateMigrationResults) == 0 {
-		return "", errors.E(errors.CodeNotImplemented)
+		return "", errors.New("").WithCode(errors.CodeNotImplemented)
 	}
 	var result result
 	result, c.initiateMigrationResults = c.initiateMigrationResults[0], c.initiateMigrationResults[1:]

@@ -10,7 +10,6 @@ package jujuauth
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/juju/names/v5"
@@ -93,7 +92,7 @@ func (auth *LoginTokenGenerator) MakeLoginToken(ctx context.Context, user *openf
 	defer auth.mu.Unlock()
 
 	if user == nil {
-		return nil, errors.E("user not specified")
+		return nil, errors.New("user not specified")
 	}
 	auth.user = user
 
@@ -103,7 +102,7 @@ func (auth *LoginTokenGenerator) MakeLoginToken(ctx context.Context, user *openf
 
 	var modelAccess string
 	if auth.mt.Id() == "" {
-		return nil, errors.E("model not set")
+		return nil, errors.New("model not set")
 	}
 	modelAccess, authErr = auth.accessChecker.GetUserModelAccess(ctx, auth.user, auth.mt)
 	if authErr != nil {
@@ -113,7 +112,7 @@ func (auth *LoginTokenGenerator) MakeLoginToken(ctx context.Context, user *openf
 	auth.accessMapCache[auth.mt.String()] = modelAccess
 
 	if auth.ct.Id() == "" {
-		return nil, errors.E("controller not set")
+		return nil, errors.New("controller not set")
 	}
 	var controllerAccess string
 	controllerAccess, authErr = auth.accessChecker.GetUserControllerAccess(ctx, auth.user, auth.ct)
@@ -126,7 +125,7 @@ func (auth *LoginTokenGenerator) MakeLoginToken(ctx context.Context, user *openf
 	ctl.SetTag(auth.ct)
 	err := auth.database.GetController(ctx, &ctl)
 	if err != nil {
-		return nil, errors.E(fmt.Errorf("failed to fetch controller: %w", err))
+		return nil, errors.Newf("failed to fetch controller: %w", err)
 	}
 	clouds := make(map[names.CloudTag]bool)
 	for _, cloudRegion := range ctl.CloudRegions {
@@ -135,7 +134,7 @@ func (auth *LoginTokenGenerator) MakeLoginToken(ctx context.Context, user *openf
 	for cloudTag := range clouds {
 		accessLevel, err := auth.accessChecker.GetUserCloudAccess(ctx, auth.user, cloudTag)
 		if err != nil {
-			return nil, errors.E(fmt.Errorf("failed to check user's cloud access: %w", err))
+			return nil, errors.Newf("failed to check user's cloud access: %w", err)
 		}
 		auth.accessMapCache[cloudTag.String()] = accessLevel
 	}
@@ -156,11 +155,11 @@ func (auth *LoginTokenGenerator) MakeToken(ctx context.Context, permissionMap ma
 	defer auth.mu.Unlock()
 
 	if auth.callCount >= 10 {
-		return nil, errors.E("Permission check limit exceeded")
+		return nil, errors.New("Permission check limit exceeded")
 	}
 	auth.callCount++
 	if auth.user == nil {
-		return nil, errors.E("User authorization missing.")
+		return nil, errors.New("User authorization missing.")
 	}
 	if permissionMap != nil {
 		var err error

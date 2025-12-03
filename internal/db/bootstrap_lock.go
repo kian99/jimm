@@ -11,7 +11,6 @@ import (
 	"gorm.io/gorm/clause"
 
 	"github.com/canonical/jimm/v3/internal/dbmodel"
-	"github.com/canonical/jimm/v3/internal/errors"
 )
 
 // LockBootstrap acquires the bootstrap lock for controller bootstrap operations.
@@ -37,7 +36,7 @@ func (d *Database) LockBootstrap(ctx context.Context, ttl time.Duration) error {
 		return nil
 	})
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	return nil
 }
@@ -61,7 +60,7 @@ func (d *Database) UnlockBootstrap(ctx context.Context) error {
 		return nil
 	})
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	return nil
 }

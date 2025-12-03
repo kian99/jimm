@@ -8,8 +8,6 @@ import (
 	jujuerrors "github.com/juju/errors"
 	jujuparams "github.com/juju/juju/rpc/params"
 	"github.com/juju/names/v5"
-
-	"github.com/canonical/jimm/v3/internal/errors"
 )
 
 // ListFilesystems lists filesystems for desired machines.
@@ -30,15 +28,13 @@ func (c Connection) ListFilesystems(ctx context.Context, machines []string) ([]j
 	var results jujuparams.FilesystemDetailsListResults
 
 	if err := c.CallHighestFacadeVersion(ctx, "Storage", []int{6}, "", "ListFilesystems", &args, &results); err != nil {
-		return nil, errors.E(jujuerrors.Cause(err))
+		return nil, jujuerrors.Cause(err)
 	}
 
 	if len(results.Results) != len(filters) {
-		return nil, errors.E(
-			jujuerrors.Errorf(
-				"expected %d result(s), got %d",
-				len(filters), len(results.Results),
-			),
+		return nil, jujuerrors.Errorf(
+			"expected %d result(s), got %d",
+			len(filters), len(results.Results),
 		)
 	}
 
@@ -60,15 +56,13 @@ func (c Connection) ListVolumes(ctx context.Context, machines []string) ([]jujup
 	var results jujuparams.VolumeDetailsListResults
 
 	if err := c.CallHighestFacadeVersion(ctx, "Storage", []int{6}, "", "ListVolumes", &args, &results); err != nil {
-		return nil, errors.E(jujuerrors.Cause(err))
+		return nil, jujuerrors.Cause(err)
 	}
 
 	if len(results.Results) != len(filters) {
-		return nil, errors.E(
-			jujuerrors.Errorf(
-				"expected %d result(s), got %d",
-				len(filters), len(results.Results),
-			),
+		return nil, jujuerrors.Errorf(
+			"expected %d result(s), got %d",
+			len(filters), len(results.Results),
 		)
 	}
 
@@ -84,21 +78,17 @@ func (c Connection) ListStorageDetails(ctx context.Context) ([]jujuparams.Storag
 	var results jujuparams.StorageDetailsListResults
 
 	if err := c.CallHighestFacadeVersion(ctx, "Storage", []int{6}, "", "ListStorageDetails", &args, &results); err != nil {
-		return nil, errors.E(jujuerrors.Cause(err))
+		return nil, jujuerrors.Cause(err)
 	}
 
 	if len(results.Results) != 1 {
-		return nil, errors.E(
-			jujuerrors.Errorf(
-				"expected 1 result, got %d",
-				len(results.Results),
-			),
+		return nil, jujuerrors.Errorf(
+			"expected 1 result, got %d",
+			len(results.Results),
 		)
 	}
 	if results.Results[0].Error != nil {
-		return nil, errors.E(
-			jujuerrors.Trace(results.Results[0].Error),
-		)
+		return nil, jujuerrors.Trace(results.Results[0].Error)
 	}
 	return results.Results[0].Result, nil
 }

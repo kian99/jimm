@@ -23,35 +23,35 @@ type BootstapManager struct {
 
 func (b *BootstapManager) GetJobInfo(ctx context.Context, user *openfga.User, jobId uuid.UUID, offset int) (params.GetJobInfoResponse, error) {
 	if b.GetJobInfo_ == nil {
-		return params.GetJobInfoResponse{}, errors.E(errors.CodeNotImplemented)
+		return params.GetJobInfoResponse{}, errors.New("").WithCode(errors.CodeNotImplemented)
 	}
 	return b.GetJobInfo_(ctx, user, jobId, offset)
 }
 
 func (b *BootstapManager) StopJob(ctx context.Context, user *openfga.User, jobId uuid.UUID) error {
 	if b.StopJob_ == nil {
-		return errors.E(errors.CodeNotImplemented)
+		return errors.New("").WithCode(errors.CodeNotImplemented)
 	}
 	return b.StopJob_(ctx, user, jobId)
 }
 
 func (b *BootstapManager) StartBootstrapJob(ctx context.Context, user *openfga.User, params bootstrap.BootstrapParams) (string, error) {
 	if b.StartBootstrapJob_ == nil {
-		return "", errors.E(errors.CodeNotImplemented)
+		return "", errors.New("").WithCode(errors.CodeNotImplemented)
 	}
 	return b.StartBootstrapJob_(ctx, user, params)
 }
 
 func (b *BootstapManager) StartDestroyControllerJob(ctx context.Context, user *openfga.User, params bootstrap.DestroyControllerParams) (string, error) {
 	if b.StartDestroyControllerJob_ == nil {
-		return "", errors.E(errors.CodeNotImplemented)
+		return "", errors.New("").WithCode(errors.CodeNotImplemented)
 	}
 	return b.StartDestroyControllerJob_(ctx, user, params)
 }
 
 func (b *BootstapManager) WaitForJobCompletion(ctx context.Context, jobId uuid.UUID, config bootstrap.WaitConfig) error {
 	if b.WaitForJobCompletion_ == nil {
-		return errors.E(errors.CodeNotImplemented)
+		return errors.New("").WithCode(errors.CodeNotImplemented)
 	}
 	return b.WaitForJobCompletion_(ctx, jobId, config)
 }

@@ -61,30 +61,30 @@ func (wkh *WellKnownHandler) JWKS(w http.ResponseWriter, r *http.Request) {
 	if wkh == nil || wkh.CredentialStore == nil {
 		zapctx.Error(ctx, "nil reference in JWKS handler")
 		w.WriteHeader(http.StatusInternalServerError)
-		render.JSON(w, r, errors.E(errors.CodeJWKSRetrievalFailed, "JWKS does not exist"))
+		render.JSON(w, r, errors.New("JWKS does not exist").WithCode(errors.CodeJWKSRetrievalFailed))
 		return
 	}
 	ks, err := wkh.CredentialStore.GetJWKS(ctx)
 
 	if err != nil && errors.ErrorCode(err) == errors.CodeNotFound {
 		w.WriteHeader(http.StatusNotFound)
-		zapctx.Error(ctx, "HTTP error", zap.NamedError("/jwks.json", errors.E(errors.CodeJWKSRetrievalFailed, "JWKS does not exist yet", err)))
-		render.JSON(w, r, errors.E(errors.CodeNotFound, "JWKS does not exist yet"))
+		zapctx.Error(ctx, "HTTP error", zap.NamedError("/jwks.json", errors.Wrap(err).WithMessage("JWKS does not exist yet").WithCode(errors.CodeJWKSRetrievalFailed)))
+		render.JSON(w, r, errors.New("JWKS does not exist yet").WithCode(errors.CodeNotFound))
 		return
 	}
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		zapctx.Error(ctx, "HTTP error", zap.NamedError("/jwks.json", errors.E(errors.CodeJWKSRetrievalFailed, "failed to retrieve JWKS", err)))
-		render.JSON(w, r, errors.E(errors.CodeJWKSRetrievalFailed, "failed to retrieve JWKS"))
+		zapctx.Error(ctx, "HTTP error", zap.NamedError("/jwks.json", errors.Wrap(err).WithMessage("failed to retrieve JWKS").WithCode(errors.CodeJWKSRetrievalFailed)))
+		render.JSON(w, r, errors.New("failed to retrieve JWKS").WithCode(errors.CodeJWKSRetrievalFailed))
 		return
 	}
 
 	expiry, err := wkh.CredentialStore.GetJWKSExpiry(ctx)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		zapctx.Error(ctx, "HTTP error", zap.NamedError("/jwks.json", errors.E(errors.CodeJWKSRetrievalFailed, "failed to retrieve JWKS expiry", err)))
-		render.JSON(w, r, errors.E(errors.CodeJWKSRetrievalFailed, "something went wrong..."))
+		zapctx.Error(ctx, "HTTP error", zap.NamedError("/jwks.json", errors.Wrap(err).WithMessage("failed to retrieve JWKS expiry").WithCode(errors.CodeJWKSRetrievalFailed)))
+		render.JSON(w, r, errors.New("something went wrong...").WithCode(errors.CodeJWKSRetrievalFailed))
 		return
 	}
 

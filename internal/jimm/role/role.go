@@ -21,10 +21,10 @@ type roleManager struct {
 // NewRoleManager returns a new RoleManager that persists the roles in the provided store.
 func NewRoleManager(store *db.Database, authSvc *openfga.OFGAClient) (*roleManager, error) {
 	if store == nil {
-		return nil, errors.E("role store cannot be nil")
+		return nil, errors.New("role store cannot be nil")
 	}
 	if authSvc == nil {
-		return nil, errors.E("role authorisation service cannot be nil")
+		return nil, errors.New("role authorisation service cannot be nil")
 	}
 	return &roleManager{store, authSvc}, nil
 }
@@ -32,12 +32,12 @@ func NewRoleManager(store *db.Database, authSvc *openfga.OFGAClient) (*roleManag
 // AddRole adds a role to JIMM.
 func (rm *roleManager) AddRole(ctx context.Context, user *openfga.User, roleName string) (*dbmodel.RoleEntry, error) {
 	if !user.JimmAdmin {
-		return nil, errors.E(errors.CodeUnauthorized, "unauthorized")
+		return nil, errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 
 	re, err := rm.store.AddRole(ctx, roleName)
 	if err != nil {
-		return nil, errors.E(err)
+		return nil, err
 	}
 	return re, nil
 }
@@ -55,7 +55,7 @@ func (rm *roleManager) GetRoleByName(ctx context.Context, user *openfga.User, na
 // RemoveRole removes the role from JIMM in both the store and authorisation store.
 func (rm *roleManager) RemoveRole(ctx context.Context, user *openfga.User, roleName string) error {
 	if !user.JimmAdmin {
-		return errors.E(errors.CodeUnauthorized, "unauthorized")
+		return errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 
 	re := &dbmodel.RoleEntry{
@@ -63,18 +63,18 @@ func (rm *roleManager) RemoveRole(ctx context.Context, user *openfga.User, roleN
 	}
 	err := rm.store.GetRole(ctx, re)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	// TODO(ale8k):
 	// Would be nice to have a way to create a transaction to get, remove tuples, if successful, delete role
 	// somehow. We could pass a callback and change the db methods?
 	if err := rm.authSvc.RemoveRole(ctx, re.ResourceTag()); err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	if err := rm.store.RemoveRole(ctx, re); err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	return nil
@@ -83,12 +83,12 @@ func (rm *roleManager) RemoveRole(ctx context.Context, user *openfga.User, roleN
 // RenameRole renames a role in JIMM's DB.
 func (rm *roleManager) RenameRole(ctx context.Context, user *openfga.User, oldName, newName string) error {
 	if !user.JimmAdmin {
-		return errors.E(errors.CodeUnauthorized, "unauthorized")
+		return errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 
 	err := rm.store.UpdateRoleName(ctx, oldName, newName)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	return nil
@@ -98,12 +98,12 @@ func (rm *roleManager) RenameRole(ctx context.Context, user *openfga.User, oldNa
 // `match` will filter the list fuzzy matching role's name or uuid.
 func (rm *roleManager) ListRoles(ctx context.Context, user *openfga.User, pagination pagination.LimitOffsetPagination, match string) ([]dbmodel.RoleEntry, error) {
 	if !user.JimmAdmin {
-		return nil, errors.E(errors.CodeUnauthorized, "unauthorized")
+		return nil, errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 
 	res, err := rm.store.ListRoles(ctx, pagination.Limit(), pagination.Offset(), match)
 	if err != nil {
-		return nil, errors.E(err)
+		return nil, err
 	}
 	return res, nil
 }
@@ -111,11 +111,11 @@ func (rm *roleManager) ListRoles(ctx context.Context, user *openfga.User, pagina
 // CountRoles returns the number of roles that exist.
 func (rm *roleManager) CountRoles(ctx context.Context, user *openfga.User) (int, error) {
 	if !user.JimmAdmin {
-		return 0, errors.E(errors.CodeUnauthorized, "unauthorized")
+		return 0, errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 	count, err := rm.store.CountRoles(ctx)
 	if err != nil {
-		return 0, errors.E(err)
+		return 0, err
 	}
 	return count, nil
 }
@@ -123,11 +123,11 @@ func (rm *roleManager) CountRoles(ctx context.Context, user *openfga.User) (int,
 // getRole returns a role based on the provided UUID or name.
 func (rm *roleManager) getRole(ctx context.Context, user *openfga.User, role *dbmodel.RoleEntry) (*dbmodel.RoleEntry, error) {
 	if !user.JimmAdmin {
-		return nil, errors.E(errors.CodeUnauthorized, "unauthorized")
+		return nil, errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 
 	if err := rm.store.GetRole(ctx, role); err != nil {
-		return nil, errors.E(err)
+		return nil, err
 	}
 
 	return role, nil

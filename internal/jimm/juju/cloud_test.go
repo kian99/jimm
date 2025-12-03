@@ -613,7 +613,7 @@ var addHostedCloudTests = []struct {
 	expectErrorCode: errors.CodeIncompatibleClouds,
 }, {
 	name:      "DialError",
-	dialError: errors.E("dial error"),
+	dialError: errors.New("dial error"),
 	username:  "alice@canonical.com",
 	cloudName: "new-cloud",
 	cloud: jujucloud.Cloud{
@@ -628,7 +628,7 @@ var addHostedCloudTests = []struct {
 }, {
 	name: "AddCloudError",
 	addCloud: func(names.CloudTag, jujucloud.Cloud, bool) error {
-		return errors.E("addcloud error")
+		return errors.New("addcloud error")
 	},
 	username:  "alice@canonical.com",
 	cloudName: "new-cloud",
@@ -872,7 +872,7 @@ var addHostedCloudToControllerTests = []struct {
 	expectErrorCode: errors.CodeIncompatibleClouds,
 }, {
 	name:           "DialError",
-	dialError:      errors.E("dial error"),
+	dialError:      errors.New("dial error"),
 	username:       "alice@canonical.com",
 	controllerName: "test-controller",
 	cloudName:      "new-cloud",
@@ -888,7 +888,7 @@ var addHostedCloudToControllerTests = []struct {
 }, {
 	name: "AddCloudError",
 	addCloud: func(names.CloudTag, jujucloud.Cloud, bool) error {
-		return errors.E("addcloud error")
+		return errors.New("addcloud error")
 	},
 	username:       "alice@canonical.com",
 	controllerName: "test-controller",
@@ -1005,7 +1005,7 @@ var removeCloudTests = []struct {
 	env:  removeCloudTestEnv,
 	removeCloud: func(ct names.CloudTag) error {
 		if ct.Id() != "test" {
-			return errors.E("bad cloud tag")
+			return errors.New("bad cloud tag")
 		}
 		return nil
 	},
@@ -1021,7 +1021,7 @@ var removeCloudTests = []struct {
 }, {
 	name:        "DialError",
 	env:         removeCloudTestEnv,
-	dialError:   errors.E("test dial error"),
+	dialError:   errors.New("test dial error"),
 	username:    "alice@canonical.com",
 	cloud:       "test",
 	expectError: `test dial error`,
@@ -1029,7 +1029,7 @@ var removeCloudTests = []struct {
 	name: "APIError",
 	env:  removeCloudTestEnv,
 	removeCloud: func(mt names.CloudTag) error {
-		return errors.E("test error")
+		return errors.New("test error")
 	},
 	username:    "alice@canonical.com",
 	cloud:       "test",
@@ -1136,7 +1136,7 @@ var updateCloudTests = []struct {
 					env:  updateCloudTestEnv,
 					updateCloud: func(_ context.Context, ct names.CloudTag, c jujucloud.Cloud) error {
 						if ct.Id() != "test-cloud" {
-							return errors.E("bad cloud tag")
+							return errors.New("bad cloud tag")
 						}
 						return nil
 					},
@@ -1203,7 +1203,7 @@ var updateCloudTests = []struct {
 		env:  updateCloudTestEnv,
 		updateCloud: func(ct names.CloudTag, c jujucloud.Cloud) error {
 			if ct.Id() != "test" {
-				return errors.E("bad cloud tag")
+				return errors.New("bad cloud tag")
 			}
 			return nil
 		},
@@ -1251,7 +1251,7 @@ var updateCloudTests = []struct {
 	}, {
 		name:        "DialError",
 		env:         updateCloudTestEnv,
-		dialError:   errors.E("test dial error"),
+		dialError:   errors.New("test dial error"),
 		username:    "alice@canonical.com",
 		cloud:       "test",
 		expectError: `test dial error`,
@@ -1259,7 +1259,7 @@ var updateCloudTests = []struct {
 		name: "APIError",
 		env:  updateCloudTestEnv,
 		updateCloud: func(names.CloudTag, jujucloud.Cloud) error {
-			return errors.E("test error")
+			return errors.New("test error")
 		},
 		username:    "alice@canonical.com",
 		cloud:       "test",
@@ -1388,7 +1388,7 @@ var removeCloudFromControllerTests = []struct {
 	env:  removeCloudFromControllerTestEnv,
 	removeCloud: func(ct names.CloudTag) error {
 		if ct.Id() != "test" {
-			return errors.E("bad cloud tag")
+			return errors.New("bad cloud tag")
 		}
 		return nil
 	},
@@ -1412,7 +1412,7 @@ var removeCloudFromControllerTests = []struct {
 	env:  removeCloudFromControllerTestEnv,
 	removeCloud: func(ct names.CloudTag) error {
 		if ct.Id() != "test-cloud-2" {
-			return errors.E("bad cloud tag")
+			return errors.New("bad cloud tag")
 		}
 		return nil
 	},
@@ -1437,7 +1437,7 @@ var removeCloudFromControllerTests = []struct {
 }, {
 	name:           "DialError",
 	env:            removeCloudFromControllerTestEnv,
-	dialError:      errors.E("test dial error"),
+	dialError:      errors.New("test dial error"),
 	username:       "alice@canonical.com",
 	cloud:          "test",
 	controllerName: "controller-2",
@@ -1446,7 +1446,7 @@ var removeCloudFromControllerTests = []struct {
 	name: "APIError",
 	env:  removeCloudFromControllerTestEnv,
 	removeCloud: func(mt names.CloudTag) error {
-		return errors.E("test error")
+		return errors.New("test error")
 	},
 	username:       "alice@canonical.com",
 	cloud:          "test",

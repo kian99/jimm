@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/canonical/jimm/v3/internal/dbmodel"
-	"github.com/canonical/jimm/v3/internal/errors"
 	"github.com/canonical/jimm/v3/internal/servermon"
 )
 
@@ -16,7 +15,7 @@ func (d *Database) AddAuditLogEntry(ctx context.Context, ale *dbmodel.AuditLogEn
 	const op = "db.AddAuditLogEntry"
 
 	if err := d.ready(); err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
@@ -24,7 +23,7 @@ func (d *Database) AddAuditLogEntry(ctx context.Context, ale *dbmodel.AuditLogEn
 	defer servermon.ErrorCounter(servermon.DBQueryErrorCount, &err, op)
 
 	if err := d.DB.WithContext(ctx).Create(ale).Error; err != nil {
-		return errors.E(dbError(err))
+		return dbError(err)
 	}
 	return nil
 }
@@ -72,7 +71,7 @@ type AuditLogFilter struct {
 func (d *Database) ForEachAuditLogEntry(ctx context.Context, filter AuditLogFilter, f func(*dbmodel.AuditLogEntry) error) (err error) {
 	const op = "db.ForEachAuditLogEntry"
 	if err := d.ready(); err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
@@ -107,20 +106,20 @@ func (d *Database) ForEachAuditLogEntry(ctx context.Context, filter AuditLogFilt
 
 	rows, err := db.Rows()
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var ale dbmodel.AuditLogEntry
 		if err := db.ScanRows(rows, &ale); err != nil {
-			return errors.E(err)
+			return err
 		}
 		if err := f(&ale); err != nil {
 			return err
 		}
 	}
 	if rows.Err() != nil {
-		return errors.E(rows.Err())
+		return rows.Err()
 	}
 	return nil
 }
@@ -131,7 +130,7 @@ func (d *Database) DeleteAuditLogsBefore(ctx context.Context, before time.Time) 
 	const op = "db.DeleteAuditLogsBefore"
 
 	if err := d.ready(); err != nil {
-		return 0, errors.E(err)
+		return 0, err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
@@ -144,7 +143,7 @@ func (d *Database) DeleteAuditLogsBefore(ctx context.Context, before time.Time) 
 		Where("time < ?", before).
 		Delete(&dbmodel.AuditLogEntry{})
 	if tx.Error != nil {
-		return 0, errors.E(dbError(tx.Error))
+		return 0, dbError(tx.Error)
 	}
 	return tx.RowsAffected, nil
 }

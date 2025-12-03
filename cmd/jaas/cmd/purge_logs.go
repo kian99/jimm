@@ -63,13 +63,13 @@ func (c *purgeLogsCommand) Info() *cmd.Info {
 // the date.
 func (c *purgeLogsCommand) Init(args []string) error {
 	if len(args) != 1 {
-		return errors.E("expected one argument (ISO8601 date)")
+		return errors.New("expected one argument (ISO8601 date)")
 	}
 	// validate date
 	var err error
 	c.date, err = parseDate(args[0])
 	if err != nil {
-		return errors.E("invalid date. Expected ISO8601 date")
+		return errors.New("invalid date. Expected ISO8601 date")
 	}
 	return nil
 }
@@ -88,7 +88,7 @@ func (c *purgeLogsCommand) SetFlags(f *gnuflag.FlagSet) {
 func (c *purgeLogsCommand) Run(ctx *cmd.Context) error {
 	currentController, err := c.store.CurrentController()
 	if err != nil {
-		return errors.E(err, "could not determine controller")
+		return errors.Wrap(err).WithMessage("could not determine controller")
 	}
 
 	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
@@ -101,11 +101,11 @@ func (c *purgeLogsCommand) Run(ctx *cmd.Context) error {
 		Date: c.date,
 	})
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	err = c.out.Write(ctx, response)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	return nil
 }
@@ -133,5 +133,5 @@ func parseDate(date string) (time.Time, error) {
 	}
 
 	// If none of the layouts match, the date is not in the correct format
-	return time.Time{}, errors.E("invalid date. Expected ISO8601 date")
+	return time.Time{}, errors.New("invalid date. Expected ISO8601 date")
 }

@@ -91,11 +91,11 @@ func (c *addGroupCommand) SetFlags(f *gnuflag.FlagSet) {
 // Init implements the cmd.Command interface.
 func (c *addGroupCommand) Init(args []string) error {
 	if len(args) < 1 {
-		return errors.E("group name not specified")
+		return errors.New("group name not specified")
 	}
 	c.name, args = args[0], args[1:]
 	if len(args) > 0 {
-		return errors.E("too many args")
+		return errors.New("too many args")
 	}
 	return nil
 }
@@ -104,7 +104,7 @@ func (c *addGroupCommand) Init(args []string) error {
 func (c *addGroupCommand) Run(ctxt *cmd.Context) error {
 	currentController, err := c.store.CurrentController()
 	if err != nil {
-		return errors.E(err, "could not determine controller")
+		return errors.Wrap(err).WithMessage("could not determine controller")
 	}
 
 	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
@@ -117,12 +117,12 @@ func (c *addGroupCommand) Run(ctxt *cmd.Context) error {
 		Name: c.name,
 	})
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	err = c.out.Write(ctxt, resp)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	return nil
 }
@@ -161,11 +161,11 @@ func (c *renameGroupCommand) Info() *cmd.Info {
 // Init implements the cmd.Command interface.
 func (c *renameGroupCommand) Init(args []string) error {
 	if len(args) < 2 {
-		return errors.E("group name not specified")
+		return errors.New("group name not specified")
 	}
 	c.name, c.newName, args = args[0], args[1], args[2:]
 	if len(args) > 0 {
-		return errors.E("too many args")
+		return errors.New("too many args")
 	}
 	return nil
 }
@@ -174,7 +174,7 @@ func (c *renameGroupCommand) Init(args []string) error {
 func (c *renameGroupCommand) Run(ctxt *cmd.Context) error {
 	currentController, err := c.store.CurrentController()
 	if err != nil {
-		return errors.E(err, "could not determine controller")
+		return errors.Wrap(err).WithMessage("could not determine controller")
 	}
 
 	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
@@ -190,7 +190,7 @@ func (c *renameGroupCommand) Run(ctxt *cmd.Context) error {
 	client := api.NewClient(apiCaller)
 	err = client.RenameGroup(&params)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	return nil
@@ -231,11 +231,11 @@ func (c *removeGroupCommand) Info() *cmd.Info {
 // Init implements the cmd.Command interface.
 func (c *removeGroupCommand) Init(args []string) error {
 	if len(args) < 1 {
-		return errors.E("group name not specified")
+		return errors.New("group name not specified")
 	}
 	c.name, args = args[0], args[1:]
 	if len(args) > 0 {
-		return errors.E("too many args")
+		return errors.New("too many args")
 	}
 	return nil
 }
@@ -253,7 +253,7 @@ func (c *removeGroupCommand) SetFlags(f *gnuflag.FlagSet) {
 func (c *removeGroupCommand) Run(ctxt *cmd.Context) error {
 	currentController, err := c.store.CurrentController()
 	if err != nil {
-		return errors.E(err, "could not determine controller")
+		return errors.Wrap(err).WithMessage("could not determine controller")
 	}
 
 	if !c.force {
@@ -265,7 +265,7 @@ func (c *removeGroupCommand) Run(ctxt *cmd.Context) error {
 		}
 		text, err := reader.ReadString('\n')
 		if err != nil {
-			return errors.E(err, "Failed to read from input.")
+			return errors.Wrap(err).WithMessage("Failed to read from input.")
 		}
 		text = strings.ReplaceAll(text, "\n", "")
 		if text != "y" && text != "Y" {
@@ -285,7 +285,7 @@ func (c *removeGroupCommand) Run(ctxt *cmd.Context) error {
 	client := api.NewClient(apiCaller)
 	err = client.RemoveGroup(&params)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	return nil
@@ -326,7 +326,7 @@ func (c *listGroupsCommand) Info() *cmd.Info {
 // Init implements the cmd.Command interface.
 func (c *listGroupsCommand) Init(args []string) error {
 	if len(args) > 0 {
-		return errors.E("too many args")
+		return errors.New("too many args")
 	}
 	return nil
 }
@@ -346,7 +346,7 @@ func (c *listGroupsCommand) SetFlags(f *gnuflag.FlagSet) {
 func (c *listGroupsCommand) Run(ctxt *cmd.Context) error {
 	currentController, err := c.store.CurrentController()
 	if err != nil {
-		return errors.E(err, "could not determine controller")
+		return errors.Wrap(err).WithMessage("could not determine controller")
 	}
 
 	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
@@ -358,12 +358,12 @@ func (c *listGroupsCommand) Run(ctxt *cmd.Context) error {
 	req := apiparams.ListGroupsRequest{Limit: c.limit, Offset: c.offset}
 	groups, err := client.ListGroups(&req)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	err = c.out.Write(ctxt, groups)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	return nil

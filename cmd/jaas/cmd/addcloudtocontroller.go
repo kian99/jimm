@@ -3,7 +3,6 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/juju/cmd/v3"
@@ -99,18 +98,18 @@ func (c *addCloudToControllerCommand) SetFlags(f *gnuflag.FlagSet) {
 // Init implements the cmd.Command interface.
 func (c *addCloudToControllerCommand) Init(args []string) error {
 	if len(args) < 2 {
-		return errors.E("missing arguments")
+		return errors.New("missing arguments")
 	}
 	if len(args) > 2 {
-		return errors.E("too many arguments")
+		return errors.New("too many arguments")
 	}
 	c.dstControllerName = args[0]
 	if ok := names.IsValidControllerName(c.dstControllerName); !ok {
-		return errors.E("invalid controller name %q", c.dstControllerName)
+		return errors.Newf("invalid controller name %q", c.dstControllerName)
 	}
 	c.cloudName = args[1]
 	if ok := names.IsValidCloud(c.cloudName); !ok {
-		return errors.E("invalid cloud name %q", c.cloudName)
+		return errors.Newf("invalid cloud name %q", c.cloudName)
 	}
 
 	return nil
@@ -123,14 +122,14 @@ func (c *addCloudToControllerCommand) Run(ctxt *cmd.Context) error {
 	if c.cloudDefinitionFile != "" {
 		newCloud, err = c.readCloudFromFile(ctxt)
 		if err != nil {
-			return errors.E(err, fmt.Sprintf("error reading cloud from file: %v", err))
+			return errors.Newf("error reading cloud from file: %w", err)
 		}
 	} else {
 		// It's possible that the user wants to add an existing cloud to a controller,
 		// so let's see if we can find the cloud.
 		newCloud, err = c.cloudByNameFunc(c.cloudName)
 		if err != nil {
-			return errors.E("could not find existing cloud, please provide a cloud file")
+			return errors.New("could not find existing cloud, please provide a cloud file")
 		}
 	}
 
@@ -141,7 +140,7 @@ func (c *addCloudToControllerCommand) Run(ctxt *cmd.Context) error {
 
 	err = c.addCloudToController(ctxt, newCloud)
 	if err != nil {
-		return errors.E(err, fmt.Sprintf("error adding cloud to controller: %v", err))
+		return errors.Newf("error adding cloud to controller: %w", err)
 	}
 
 	return nil
@@ -150,7 +149,7 @@ func (c *addCloudToControllerCommand) Run(ctxt *cmd.Context) error {
 func (c *addCloudToControllerCommand) addCloudToController(ctxt *cmd.Context, cloud *cloud.Cloud) error {
 	currentController, err := c.store.CurrentController()
 	if err != nil {
-		return errors.E(err, "could not determine the current controller")
+		return errors.Wrap(err).WithMessage("could not determine the current controller")
 	}
 	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
 	if err != nil {
@@ -169,7 +168,7 @@ func (c *addCloudToControllerCommand) addCloudToController(ctxt *cmd.Context, cl
 
 	err = client.AddCloudToController(params)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	ctxt.Infof("Cloud %q added to controller %q.", c.cloudName, c.dstControllerName)
@@ -183,7 +182,7 @@ func (c *addCloudToControllerCommand) readCloudFromFile(ctxt *cmd.Context) (*clo
 	}
 	newCloud, err := r.ReadCloudFromFile(c.cloudDefinitionFile, ctxt)
 	if err != nil {
-		return nil, errors.E(err)
+		return nil, err
 	}
 	return newCloud, nil
 }

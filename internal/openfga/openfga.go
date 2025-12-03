@@ -102,7 +102,7 @@ func publicAccessAdaptor(tt cofga.TimestampedTuple) cofga.TimestampedTuple {
 // Note that the action is idempotent (does not return error if the relation already exists).
 func (o *OFGAClient) setResourceAccess(ctx context.Context, object, target names.Tag, relation Relation) error {
 	if object == nil || target == nil {
-		return errors.E("missing object or target for relation")
+		return errors.New("missing object or target for relation")
 	}
 	err := o.AddRelation(ctx, Tuple{
 		Object:   ofganames.ConvertGenericTag(object),
@@ -115,7 +115,7 @@ func (o *OFGAClient) setResourceAccess(ctx context.Context, object, target names
 		if strings.Contains(err.Error(), "cannot write a tuple which already exists") {
 			return nil
 		}
-		return errors.E(err)
+		return err
 	}
 	return nil
 }
@@ -124,7 +124,7 @@ func (o *OFGAClient) setResourceAccess(ctx context.Context, object, target names
 // Note that the action is idempotent (does not return error if the relation does not exist).
 func (o *OFGAClient) unsetResourceAccess(ctx context.Context, object, target names.Tag, relation Relation) error {
 	if object == nil || target == nil {
-		return errors.E("missing object or target for relation")
+		return errors.New("missing object or target for relation")
 	}
 	err := o.RemoveRelation(ctx, Tuple{
 		Object:   ofganames.ConvertGenericTag(object),
@@ -137,7 +137,7 @@ func (o *OFGAClient) unsetResourceAccess(ctx context.Context, object, target nam
 		if strings.Contains(err.Error(), "cannot delete a tuple which does not exist") {
 			return nil
 		}
-		return errors.E(err)
+		return err
 	}
 	return nil
 }
@@ -296,12 +296,12 @@ func (o *OFGAClient) RemoveModel(ctx context.Context, model names.ModelTag) erro
 			Target: ofganames.ConvertTag(model),
 		},
 	); err != nil {
-		return errors.E(err)
+		return err
 	}
 	// Remove the relation between the model and any application offers.
 	offerKind, err := ofganames.BlankKindTag(names.ApplicationOfferTagKind)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	if err := o.removeTuples(
 		ctx,
@@ -310,7 +310,7 @@ func (o *OFGAClient) RemoveModel(ctx context.Context, model names.ModelTag) erro
 			Target: offerKind,
 		},
 	); err != nil {
-		return errors.E(err)
+		return err
 	}
 	return nil
 }
@@ -328,7 +328,7 @@ func (o *OFGAClient) RemoveApplicationOffer(ctx context.Context, offer names.App
 			Target: ofganames.ConvertTag(offer),
 		},
 	); err != nil {
-		return errors.E(err)
+		return err
 	}
 	return nil
 }
@@ -343,7 +343,7 @@ func (o *OFGAClient) RemoveRole(ctx context.Context, role jimmnames.RoleTag) err
 			Target:   ofganames.ConvertTag(role),
 		},
 	); err != nil {
-		return errors.E(err)
+		return err
 	}
 	// Next remove all access that a group had. I.e. group->model
 	// We need to loop through all resource types because the OpenFGA Read API does not provide
@@ -351,7 +351,7 @@ func (o *OFGAClient) RemoveRole(ctx context.Context, role jimmnames.RoleTag) err
 	for _, kind := range resourceTypes {
 		kt, err := ofganames.BlankKindTag(kind)
 		if err != nil {
-			return errors.E(err)
+			return err
 		}
 		newTuple := Tuple{
 			Object: ofganames.ConvertTagWithRelation(role, ofganames.AssigneeRelation),
@@ -359,7 +359,7 @@ func (o *OFGAClient) RemoveRole(ctx context.Context, role jimmnames.RoleTag) err
 		}
 		err = o.removeTuples(ctx, newTuple)
 		if err != nil {
-			return errors.E(err)
+			return err
 		}
 	}
 	return nil
@@ -375,7 +375,7 @@ func (o *OFGAClient) RemoveGroup(ctx context.Context, group jimmnames.GroupTag) 
 			Target:   ofganames.ConvertTag(group),
 		},
 	); err != nil {
-		return errors.E(err)
+		return err
 	}
 	// Next remove all access that a group had. I.e. group->model
 	// We need to loop through all resource types because the OpenFGA Read API does not provide
@@ -383,7 +383,7 @@ func (o *OFGAClient) RemoveGroup(ctx context.Context, group jimmnames.GroupTag) 
 	for _, kind := range resourceTypes {
 		kt, err := ofganames.BlankKindTag(kind)
 		if err != nil {
-			return errors.E(err)
+			return err
 		}
 		newTuple := Tuple{
 			Object: ofganames.ConvertTagWithRelation(group, ofganames.MemberRelation),
@@ -391,7 +391,7 @@ func (o *OFGAClient) RemoveGroup(ctx context.Context, group jimmnames.GroupTag) 
 		}
 		err = o.removeTuples(ctx, newTuple)
 		if err != nil {
-			return errors.E(err)
+			return err
 		}
 	}
 	return nil
@@ -405,7 +405,7 @@ func (o *OFGAClient) RemoveCloud(ctx context.Context, cloud names.CloudTag) erro
 			Target: ofganames.ConvertTag(cloud),
 		},
 	); err != nil {
-		return errors.E(err)
+		return err
 	}
 	return nil
 }

@@ -74,7 +74,7 @@ type Resource struct {
 func (d *Database) ListResources(ctx context.Context, limit, offset int, namePrefixFilter, typeFilter string) (_ []Resource, err error) {
 	const op = "db.ListResources"
 	if err := d.ready(); err != nil {
-		return nil, errors.E(err)
+		return nil, err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
@@ -89,7 +89,7 @@ func (d *Database) ListResources(ctx context.Context, limit, offset int, namePre
 
 	var resources []Resource
 	if err := query.Find(&resources).Error; err != nil {
-		return nil, errors.E(dbError(err))
+		return nil, dbError(err)
 	}
 	return resources, nil
 }
@@ -140,7 +140,7 @@ func buildQuery(db *gorm.DB, offset, limit int, namePrefixFilter, typeFilter str
 		query = modelsQuery
 	default:
 		// this shouldn't happen because we have validated the entityFilter at API layer
-		return nil, errors.E("this entityType does not exist")
+		return nil, errors.New("this entityType does not exist")
 	}
 	return query.Order("id").Offset(offset).Limit(limit), nil
 }

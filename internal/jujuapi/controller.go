@@ -65,14 +65,14 @@ type ControllerService interface {
 // settings. Only some settings can be changed after bootstrap.
 // JIMM does not support changing settings via ConfigSet.
 func (r *controllerRoot) ConfigSet(ctx context.Context, args jujuparams.ControllerConfigSet) error {
-	return errors.E(errors.CodeNotSupported)
+	return errors.New("").WithCode(errors.CodeNotSupported)
 }
 
 // MongoVersion allows the introspection of the mongo version per
 // controller. This returns a not-supported error as JIMM does not use
 // mongodb for a database.
 func (r *controllerRoot) MongoVersion(ctx context.Context) (jujuparams.StringResult, error) {
-	return jujuparams.StringResult{}, errors.E(errors.CodeNotSupported)
+	return jujuparams.StringResult{}, errors.New("").WithCode(errors.CodeNotSupported)
 }
 
 // IdentityProviderURL returns the URL of the configured external identity
@@ -88,7 +88,7 @@ func (r *controllerRoot) ControllerVersion(ctx context.Context) (jujuparams.Cont
 
 	srvVersion, err := r.jimm.JujuManager().EarliestControllerVersion(ctx)
 	if err != nil {
-		return jujuparams.ControllerVersionResults{}, errors.E(err)
+		return jujuparams.ControllerVersionResults{}, err
 	}
 	result := jujuparams.ControllerVersionResults{
 		Version:   srvVersion.String(),
@@ -103,7 +103,7 @@ func (r *controllerRoot) WatchModelSummaries(ctx context.Context) (jujuparams.Su
 
 	err := r.setupUUIDGenerator()
 	if err != nil {
-		return jujuparams.SummaryWatcherID{}, errors.E(err)
+		return jujuparams.SummaryWatcherID{}, err
 	}
 
 	id := fmt.Sprintf("%v", r.generator.Next())
@@ -111,7 +111,7 @@ func (r *controllerRoot) WatchModelSummaries(ctx context.Context) (jujuparams.Su
 	getModels := func(ctx context.Context) ([]string, error) {
 		models, err := r.allModels(ctx)
 		if err != nil {
-			return nil, errors.E(err)
+			return nil, err
 		}
 		modelUUIDs := make([]string, len(models.UserModels))
 		for i, model := range models.UserModels {
@@ -121,7 +121,7 @@ func (r *controllerRoot) WatchModelSummaries(ctx context.Context) (jujuparams.Su
 	}
 	watcher, err := newModelSummaryWatcher(ctx, id, r.jimm.PubSubHub(), getModels)
 	if err != nil {
-		return jujuparams.SummaryWatcherID{}, errors.E(err)
+		return jujuparams.SummaryWatcherID{}, err
 	}
 	r.watchers.register(watcher)
 
@@ -135,12 +135,12 @@ func (r *controllerRoot) WatchModelSummaries(ctx context.Context) (jujuparams.Su
 func (r *controllerRoot) WatchAllModelSummaries(ctx context.Context) (jujuparams.SummaryWatcherID, error) {
 
 	if !r.user.JimmAdmin {
-		return jujuparams.SummaryWatcherID{}, errors.E(errors.CodeUnauthorized, "unauthorized")
+		return jujuparams.SummaryWatcherID{}, errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 
 	err := r.setupUUIDGenerator()
 	if err != nil {
-		return jujuparams.SummaryWatcherID{}, errors.E(err)
+		return jujuparams.SummaryWatcherID{}, err
 	}
 
 	id := fmt.Sprintf("%v", r.generator.Next())
@@ -152,14 +152,14 @@ func (r *controllerRoot) WatchAllModelSummaries(ctx context.Context) (jujuparams
 			return nil
 		})
 		if err != nil {
-			return nil, errors.E(err)
+			return nil, err
 		}
 		return modelUUIDs, nil
 	}
 
 	watcher, err := newModelSummaryWatcher(ctx, id, r.jimm.PubSubHub(), getAllModels)
 	if err != nil {
-		return jujuparams.SummaryWatcherID{}, errors.E(err)
+		return jujuparams.SummaryWatcherID{}, err
 	}
 	r.watchers.register(watcher)
 
@@ -185,7 +185,7 @@ func (r *controllerRoot) allModels(ctx context.Context) (jujuparams.UserModelLis
 		return nil
 	})
 	if err != nil {
-		return jujuparams.UserModelList{}, errors.E(err)
+		return jujuparams.UserModelList{}, err
 	}
 	return jujuparams.UserModelList{
 		UserModels: models,
@@ -201,12 +201,12 @@ func (r *controllerRoot) ModelStatus(ctx context.Context, args jujuparams.Entiti
 	for i, arg := range args.Entities {
 		mt, err := names.ParseModelTag(arg.Tag)
 		if err != nil {
-			results[i].Error = r.mapError(ctx, errors.E(err, errors.CodeBadRequest))
+			results[i].Error = r.mapError(ctx, errors.Wrap(err).WithCode(errors.CodeBadRequest))
 			continue
 		}
 		status, err := r.jimm.JujuManager().ModelStatus(ctx, r.user, mt)
 		if err != nil {
-			results[i].Error = r.mapError(ctx, errors.E(err))
+			results[i].Error = r.mapError(ctx, err)
 			continue
 		}
 		results[i] = *status
@@ -221,7 +221,7 @@ func (r *controllerRoot) ControllerConfig(ctx context.Context) (jujuparams.Contr
 
 	config, err := r.jimm.ConfigManager().GetConfig()
 	if err != nil {
-		return jujuparams.ControllerConfigResult{}, errors.E(err)
+		return jujuparams.ControllerConfigResult{}, err
 	}
 	cfg := make(map[string]interface{})
 	cfg[jujucontroller.ControllerUUIDKey] = config.ControllerUUID
@@ -245,7 +245,7 @@ func (r *controllerRoot) ControllerConfig(ctx context.Context) (jujuparams.Contr
 //
 //	This method returns a not-supported error.
 func (r *controllerRoot) ModelConfig() (jujuparams.ModelConfigResults, error) {
-	return jujuparams.ModelConfigResults{}, errors.E(errors.CodeNotSupported)
+	return jujuparams.ModelConfigResults{}, errors.New("").WithCode(errors.CodeNotSupported)
 }
 
 // GetControllerAccess returns the access level on the controller for
@@ -256,12 +256,12 @@ func (r *controllerRoot) GetControllerAccess(ctx context.Context, args jujuparam
 	for i, arg := range args.Entities {
 		tag, err := names.ParseUserTag(arg.Tag)
 		if err != nil {
-			results[i].Error = r.mapError(ctx, errors.E(err, errors.CodeBadRequest))
+			results[i].Error = r.mapError(ctx, errors.Wrap(err).WithCode(errors.CodeBadRequest))
 			continue
 		}
 		access, err := r.jimm.PermissionManager().GetJimmControllerAccess(ctx, r.user, tag)
 		if err != nil {
-			results[i].Error = r.mapError(ctx, errors.E(err))
+			results[i].Error = r.mapError(ctx, err)
 			continue
 		}
 		results[i].Result = &jujuparams.UserAccess{
@@ -283,7 +283,7 @@ func (r *controllerRoot) InitiateMigration(ctx context.Context, args jujuparams.
 	for i, spec := range args.Specs {
 		result, err := r.jimm.JujuManager().InitiateMigration(ctx, r.user, spec)
 		if err != nil {
-			result.Error = r.mapError(ctx, errors.E(err))
+			result.Error = r.mapError(ctx, err)
 		}
 		results[i] = result
 	}

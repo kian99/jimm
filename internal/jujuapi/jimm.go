@@ -122,7 +122,7 @@ func init() {
 func (r *controllerRoot) DisableControllerUUIDMasking(ctx context.Context) error {
 
 	if !r.user.JimmAdmin {
-		return errors.E(errors.CodeUnauthorized, "unauthorized")
+		return errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 	r.controllerUUIDMasking = false
 	return nil
@@ -169,7 +169,7 @@ func (r *controllerRoot) AddCloudToController(ctx context.Context, req apiparams
 
 	cloud := cloudFromParams(req.Name, req.Cloud)
 	if err := r.jimm.JujuManager().AddCloudToController(ctx, r.user, req.ControllerName, names.NewCloudTag(req.Name), cloud, force); err != nil {
-		return errors.E(err)
+		return err
 	}
 	return nil
 }
@@ -179,24 +179,24 @@ func (r *controllerRoot) AddCloudToController(ctx context.Context, req apiparams
 func (r *controllerRoot) AddController(ctx context.Context, req apiparams.AddControllerRequest) (apiparams.ControllerInfo, error) {
 
 	if req.Name == jimmControllerName {
-		return apiparams.ControllerInfo{}, errors.E(errors.CodeBadRequest, fmt.Sprintf("cannot add a controller with name %q", jimmControllerName))
+		return apiparams.ControllerInfo{}, errors.New("").WithCode(errors.CodeBadRequest).WithMessagef("cannot add a controller with name %q", jimmControllerName)
 	}
 	if req.PublicAddress != "" {
 		host, port, err := net.SplitHostPort(req.PublicAddress)
 		if err != nil {
-			return apiparams.ControllerInfo{}, errors.E(err, errors.CodeBadRequest)
+			return apiparams.ControllerInfo{}, errors.Wrap(err).WithCode(errors.CodeBadRequest)
 		}
 		if host == "" {
-			return apiparams.ControllerInfo{}, errors.E(fmt.Sprintf("address %s: host not specified in public address", req.PublicAddress), errors.CodeBadRequest)
+			return apiparams.ControllerInfo{}, errors.Newf("address %s: host not specified in public address", req.PublicAddress).WithCode(errors.CodeBadRequest)
 		}
 		if port == "" {
-			return apiparams.ControllerInfo{}, errors.E(fmt.Sprintf("address %s: port not specified in public address", req.PublicAddress), errors.CodeBadRequest)
+			return apiparams.ControllerInfo{}, errors.Newf("address %s: port not specified in public address", req.PublicAddress).WithCode(errors.CodeBadRequest)
 		}
 	}
 
 	nphps, err := network.ParseProviderHostPorts(req.APIAddresses...)
 	if err != nil {
-		return apiparams.ControllerInfo{}, errors.E(errors.CodeBadRequest, err)
+		return apiparams.ControllerInfo{}, errors.Wrap(err).WithCode(errors.CodeBadRequest)
 	}
 	for i := range nphps {
 		// Mark all the unknown scopes public.
@@ -219,7 +219,7 @@ func (r *controllerRoot) AddController(ctx context.Context, req apiparams.AddCon
 		AdminPassword:     req.Password,
 	}
 	if err := r.jimm.JujuManager().AddController(ctx, r.user, &ctl, ctlCreds); err != nil {
-		return apiparams.ControllerInfo{}, errors.E(fmt.Errorf("failed to add controller: %w", err))
+		return apiparams.ControllerInfo{}, errors.Newf("failed to add controller: %w", err)
 	}
 	return ctl.ToAPIControllerInfo(), nil
 }
@@ -235,7 +235,7 @@ func (r *controllerRoot) ListControllers(ctx context.Context) (apiparams.ListCon
 		// itself as the only controller.
 		srvVersion, err := r.jimm.JujuManager().EarliestControllerVersion(ctx)
 		if err != nil {
-			return apiparams.ListControllersResponse{}, errors.E(err)
+			return apiparams.ListControllersResponse{}, err
 		}
 		jimmCtl := apiparams.ControllerInfo{
 			Name: "jaas",
@@ -251,7 +251,7 @@ func (r *controllerRoot) ListControllers(ctx context.Context) (apiparams.ListCon
 	}
 	dbControllers, err := r.jimm.JujuManager().ListControllers(ctx, r.user)
 	if err != nil {
-		return apiparams.ListControllersResponse{}, errors.E(err)
+		return apiparams.ListControllersResponse{}, err
 	}
 	controllersInfo := make([]apiparams.ControllerInfo, 0, len(dbControllers))
 	for _, ctl := range dbControllers {
@@ -267,11 +267,11 @@ func (r *controllerRoot) RemoveController(ctx context.Context, req apiparams.Rem
 
 	ctl, err := r.jimm.JujuManager().ControllerInfo(ctx, req.Name)
 	if err != nil {
-		return apiparams.ControllerInfo{}, errors.E(err)
+		return apiparams.ControllerInfo{}, err
 	}
 
 	if err := r.jimm.JujuManager().RemoveController(ctx, r.user, req.Name, req.Force); err != nil {
-		return apiparams.ControllerInfo{}, errors.E(err)
+		return apiparams.ControllerInfo{}, err
 	}
 	return ctl.ToAPIControllerInfo(), nil
 }
@@ -280,11 +280,11 @@ func (r *controllerRoot) RemoveController(ctx context.Context, req apiparams.Rem
 func (r *controllerRoot) SetControllerDeprecated(ctx context.Context, req apiparams.SetControllerDeprecatedRequest) (apiparams.ControllerInfo, error) {
 
 	if err := r.jimm.JujuManager().SetControllerDeprecated(ctx, r.user, req.Name, req.Deprecated); err != nil {
-		return apiparams.ControllerInfo{}, errors.E(err)
+		return apiparams.ControllerInfo{}, err
 	}
 	ctl, err := r.jimm.JujuManager().ControllerInfo(ctx, req.Name)
 	if err != nil {
-		return apiparams.ControllerInfo{}, errors.E(err)
+		return apiparams.ControllerInfo{}, err
 	}
 	return ctl.ToAPIControllerInfo(), nil
 }
@@ -304,19 +304,19 @@ func auditParamsToFilter(req apiparams.FindAuditEventsRequest) (db.AuditLogFilte
 	if req.After != "" {
 		filter.Start, err = time.Parse(time.RFC3339, req.After)
 		if err != nil {
-			return filter, errors.E(err, errors.CodeBadRequest, `invalid "after" filter`)
+			return filter, errors.Wrap(err).WithMessage(`invalid "after" filter`).WithCode(errors.CodeBadRequest)
 		}
 	}
 	if req.Before != "" {
 		filter.End, err = time.Parse(time.RFC3339, req.Before)
 		if err != nil {
-			return filter, errors.E(err, errors.CodeBadRequest, `invalid "before" filter`)
+			return filter, errors.Wrap(err).WithMessage(`invalid "before" filter`).WithCode(errors.CodeBadRequest)
 		}
 	}
 	if req.UserTag != "" {
 		tag, err := names.ParseUserTag(req.UserTag)
 		if err != nil {
-			return filter, errors.E(err, errors.CodeBadRequest, `invalid "user-tag" filter`)
+			return filter, errors.Wrap(err).WithMessage(`invalid "user-tag" filter`).WithCode(errors.CodeBadRequest)
 		}
 		filter.IdentityTag = tag.String()
 	}
@@ -342,11 +342,11 @@ func (r *controllerRoot) FindAuditEvents(ctx context.Context, req apiparams.Find
 
 	filter, err := auditParamsToFilter(req)
 	if err != nil {
-		return apiparams.AuditEvents{}, errors.E(err)
+		return apiparams.AuditEvents{}, err
 	}
 	entries, err := r.jimm.AuditLogManager().FindAuditEvents(ctx, r.user, filter)
 	if err != nil {
-		return apiparams.AuditEvents{}, errors.E(err)
+		return apiparams.AuditEvents{}, err
 	}
 
 	events := make([]apiparams.AuditEvent, len(entries))
@@ -365,12 +365,12 @@ func (r *controllerRoot) GrantAuditLogAccess(ctx context.Context, req apiparams.
 
 	ut, err := parseUserTag(req.UserTag)
 	if err != nil {
-		return errors.E(err, errors.CodeBadRequest)
+		return errors.Wrap(err).WithCode(errors.CodeBadRequest)
 	}
 
 	err = r.jimm.PermissionManager().GrantAuditLogAccess(ctx, r.user, ut)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	return nil
 }
@@ -382,12 +382,12 @@ func (r *controllerRoot) RevokeAuditLogAccess(ctx context.Context, req apiparams
 
 	ut, err := parseUserTag(req.UserTag)
 	if err != nil {
-		return errors.E(err, errors.CodeBadRequest)
+		return errors.Wrap(err).WithCode(errors.CodeBadRequest)
 	}
 
 	err = r.jimm.PermissionManager().RevokeAuditLogAccess(ctx, r.user, ut)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	return nil
 }
@@ -397,12 +397,12 @@ func (r *controllerRoot) FullModelStatus(ctx context.Context, req apiparams.Full
 
 	mt, err := names.ParseModelTag(req.ModelTag)
 	if err != nil {
-		return jujuparams.FullStatus{}, errors.E(err, errors.CodeBadRequest)
+		return jujuparams.FullStatus{}, errors.Wrap(err).WithCode(errors.CodeBadRequest)
 	}
 
 	status, err := r.jimm.JujuManager().FullModelStatus(ctx, r.user, mt, req.Patterns)
 	if err != nil {
-		return jujuparams.FullStatus{}, errors.E(err)
+		return jujuparams.FullStatus{}, err
 	}
 
 	return *status, nil
@@ -413,16 +413,16 @@ func (r *controllerRoot) FullModelStatus(ctx context.Context, req apiparams.Full
 func (r *controllerRoot) UpdateMigratedModel(ctx context.Context, req apiparams.UpdateMigratedModelRequest) error {
 
 	if !r.user.JimmAdmin {
-		return errors.E(errors.CodeUnauthorized, "unauthorized")
+		return errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 
 	mt, err := names.ParseModelTag(req.ModelTag)
 	if err != nil {
-		return errors.E(err, errors.CodeBadRequest)
+		return errors.Wrap(err).WithCode(errors.CodeBadRequest)
 	}
 	err = r.jimm.JujuManager().UpdateMigratedModel(ctx, r.user, mt, req.TargetController)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	return nil
 }
@@ -433,12 +433,12 @@ func (r *controllerRoot) ImportModel(ctx context.Context, req apiparams.ImportMo
 
 	mt, err := names.ParseModelTag(req.ModelTag)
 	if err != nil {
-		return errors.E(err, errors.CodeBadRequest)
+		return errors.Wrap(err).WithCode(errors.CodeBadRequest)
 	}
 
 	err = r.jimm.JujuManager().ImportModel(ctx, r.user, req.Controller, mt, req.Owner)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	return nil
 }
@@ -448,10 +448,10 @@ func (r *controllerRoot) RemoveCloudFromController(ctx context.Context, req apip
 
 	ct, err := names.ParseCloudTag(req.CloudTag)
 	if err != nil {
-		return errors.E(err, errors.CodeBadRequest)
+		return errors.Wrap(err).WithCode(errors.CodeBadRequest)
 	}
 	if err := r.jimm.JujuManager().RemoveCloudFromController(ctx, r.user, req.ControllerName, ct); err != nil {
-		return errors.E(err)
+		return err
 	}
 	return nil
 }
@@ -463,16 +463,16 @@ func (r *controllerRoot) CrossModelQuery(ctx context.Context, req apiparams.Cros
 
 	modelUUIDs, err := r.user.ListModels(ctx, ofganames.ReaderRelation)
 	if err != nil {
-		return apiparams.CrossModelQueryResponse{}, errors.E(errors.Code("failed to list user's model access"))
+		return apiparams.CrossModelQueryResponse{}, errors.New("failed to list user's model access")
 	}
 
 	switch strings.TrimSpace(strings.ToLower(req.Type)) {
 	case "jq":
 		return r.jimm.JujuManager().QueryModelsJq(ctx, modelUUIDs, req.Query)
 	case "jimmsql":
-		return apiparams.CrossModelQueryResponse{}, errors.E(errors.CodeNotImplemented)
+		return apiparams.CrossModelQueryResponse{}, errors.New("").WithCode(errors.CodeNotImplemented)
 	default:
-		return apiparams.CrossModelQueryResponse{}, errors.E(errors.Code("invalid query type"), "unable to query models")
+		return apiparams.CrossModelQueryResponse{}, errors.New("unable to query models").WithCode(errors.Code("invalid query type"))
 	}
 }
 
@@ -481,7 +481,7 @@ func (r *controllerRoot) PurgeLogs(ctx context.Context, req apiparams.PurgeLogsR
 
 	deleted_count, err := r.jimm.AuditLogManager().PurgeLogs(ctx, r.user, req.Date)
 	if err != nil {
-		return apiparams.PurgeLogsResponse{}, errors.E(err)
+		return apiparams.PurgeLogsResponse{}, err
 	}
 	return apiparams.PurgeLogsResponse{
 		DeletedCount: deleted_count,
@@ -498,7 +498,7 @@ func (r *controllerRoot) MigrateModel(ctx context.Context, args apiparams.Migrat
 	for i, arg := range args.Specs {
 		result, err := r.jimm.JujuManager().InitiateInternalMigration(ctx, r.user, arg.TargetModelNameOrUUID, arg.TargetController)
 		if err != nil {
-			result.Error = r.mapError(ctx, errors.E(err))
+			result.Error = r.mapError(ctx, err)
 		}
 		results[i] = result
 	}
@@ -523,22 +523,22 @@ func (r *controllerRoot) PrepareModelMigration(ctx context.Context, args apipara
 	resp := apiparams.PrepareModelMigrationResponse{}
 
 	if !r.user.JimmAdmin {
-		return resp, errors.E(errors.CodeUnauthorized, "unauthorized")
+		return resp, errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 
 	mt, err := names.ParseModelTag(args.ModelTag)
 	if err != nil {
-		return resp, errors.E("invalid model tag", err)
+		return resp, errors.Wrap(err).WithMessage("invalid model tag")
 	}
 
 	if !names.IsValidControllerName(args.BackingControllerName) {
-		return resp, errors.E("invalid controller name")
+		return resp, errors.New("invalid controller name")
 	}
 
 	// Check each key is a valid local user and each value is a valid user and has a domain
 	for local, external := range args.UserMapping {
 		if !names.IsValidUserName(local) {
-			return resp, errors.E(fmt.Sprintf("%s is not a valid local user name", local))
+			return resp, errors.Newf("%s is not a valid local user name", local)
 		}
 
 		if external == "" {
@@ -548,13 +548,13 @@ func (r *controllerRoot) PrepareModelMigration(ctx context.Context, args apipara
 		}
 
 		if !names.IsValidUser(external) || !strings.Contains(external, "@") {
-			return resp, errors.E(fmt.Sprintf("%s is not a valid external user name", external))
+			return resp, errors.Newf("%s is not a valid external user name", external)
 		}
 	}
 
 	resp.Token, err = r.jimm.JujuManager().PrepareModelMigration(ctx, r.user, mt.Id(), args.BackingControllerName, args.UserMapping)
 	if err != nil {
-		return resp, errors.E(err)
+		return resp, err
 	}
 
 	return resp, nil
@@ -567,12 +567,12 @@ func (r *controllerRoot) ListMigrationTargets(ctx context.Context, req apiparams
 
 	mt, err := names.ParseModelTag(req.ModelTag)
 	if err != nil {
-		return apiparams.ListControllersResponse{}, errors.E(err, errors.CodeBadRequest)
+		return apiparams.ListControllersResponse{}, errors.Wrap(err).WithCode(errors.CodeBadRequest)
 	}
 
 	dbControllers, err := r.jimm.JujuManager().ListMigrationTargets(ctx, r.user, mt)
 	if err != nil {
-		return apiparams.ListControllersResponse{}, errors.E(err)
+		return apiparams.ListControllersResponse{}, err
 	}
 	controllersInfo := make([]apiparams.ControllerInfo, 0, len(dbControllers))
 	for _, ctl := range dbControllers {
@@ -588,12 +588,12 @@ func (r *controllerRoot) ListMigrationTargets(ctx context.Context, req apiparams
 func (r *controllerRoot) GetJobInfo(ctx context.Context, req apiparams.GetJobInfoRequest) (apiparams.GetJobInfoResponse, error) {
 
 	if !r.user.JimmAdmin {
-		return apiparams.GetJobInfoResponse{}, errors.E(errors.CodeUnauthorized, "unauthorized")
+		return apiparams.GetJobInfoResponse{}, errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 
 	jobId, err := uuid.Parse(req.JobID)
 	if err != nil {
-		return apiparams.GetJobInfoResponse{}, errors.E(errors.CodeBadRequest, "invalid job ID", err)
+		return apiparams.GetJobInfoResponse{}, errors.Wrap(err).WithMessage("invalid job ID").WithCode(errors.CodeBadRequest)
 	}
 
 	return r.jimm.BootstrapManager().GetJobInfo(ctx, r.user, jobId, req.Watermark)
@@ -603,17 +603,17 @@ func (r *controllerRoot) GetJobInfo(ctx context.Context, req apiparams.GetJobInf
 func (r *controllerRoot) StopJob(ctx context.Context, req apiparams.StopJobRequest) error {
 
 	if !r.user.JimmAdmin {
-		return errors.E(errors.CodeUnauthorized, "unauthorized")
+		return errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 
 	jobID, err := uuid.Parse(req.JobID)
 	if err != nil {
-		return errors.E(errors.CodeBadRequest, "invalid job ID", err)
+		return errors.Wrap(err).WithMessage("invalid job ID").WithCode(errors.CodeBadRequest)
 	}
 
 	err = r.jimm.BootstrapManager().StopJob(ctx, r.user, jobID)
 	if err != nil {
-		return errors.E(fmt.Errorf("failed to stop job: %v", err))
+		return errors.Newf("failed to stop job: %v", err)
 	}
 	return nil
 }
@@ -622,18 +622,18 @@ func (r *controllerRoot) StopJob(ctx context.Context, req apiparams.StopJobReque
 func (r *controllerRoot) StartBootstrapJob(ctx context.Context, req apiparams.BootstrapParams) (apiparams.StartJobResponse, error) {
 
 	if !r.user.JimmAdmin {
-		return apiparams.StartJobResponse{}, errors.E(errors.CodeUnauthorized, "unauthorized")
+		return apiparams.StartJobResponse{}, errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 
 	// Check built in clouds like localhost (lxd).
 	builtinClouds, err := common.BuiltInClouds()
 	if err != nil {
-		return apiparams.StartJobResponse{}, errors.E(errors.CodeIncompatibleClouds, "unauthorized")
+		return apiparams.StartJobResponse{}, errors.New("unauthorized").WithCode(errors.CodeIncompatibleClouds)
 	}
 
 	if _, isABuiltinCloud := builtinClouds[req.CloudName]; isABuiltinCloud {
 		return apiparams.StartJobResponse{},
-			errors.E(errors.CodeIncompatibleClouds, fmt.Errorf("bootstrap via JIMM does not support built-in clouds like %q", req.CloudName))
+			errors.Newf("bootstrap via JIMM does not support built-in clouds like %q", req.CloudName).WithCode(errors.CodeIncompatibleClouds)
 	}
 
 	cloudNameAndRegion := req.CloudName
@@ -661,7 +661,7 @@ func (r *controllerRoot) StartBootstrapJob(ctx context.Context, req apiparams.Bo
 
 	jobID, err := r.jimm.BootstrapManager().StartBootstrapJob(ctx, r.user, params)
 	if err != nil {
-		return apiparams.StartJobResponse{}, errors.E(fmt.Errorf("failed to start bootstrap job: %v", err))
+		return apiparams.StartJobResponse{}, errors.Newf("failed to start bootstrap job: %v", err)
 	}
 	return apiparams.StartJobResponse{
 		JobID: jobID,
@@ -672,16 +672,16 @@ func (r *controllerRoot) StartBootstrapJob(ctx context.Context, req apiparams.Bo
 func (r *controllerRoot) StartDestroyControllerJob(ctx context.Context, req apiparams.DestroyControllerRequest) (apiparams.StartJobResponse, error) {
 
 	if !r.user.JimmAdmin {
-		return apiparams.StartJobResponse{}, errors.E(errors.CodeUnauthorized, "unauthorized")
+		return apiparams.StartJobResponse{}, errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 
 	ctrl, err := r.jimm.JujuManager().ControllerInfo(ctx, req.ControllerName)
 	if err != nil {
-		return apiparams.StartJobResponse{}, errors.E(fmt.Errorf("failed to fetch controller info: %w", err))
+		return apiparams.StartJobResponse{}, errors.Newf("failed to fetch controller info: %w", err)
 	}
 
 	if len(ctrl.Models) != 0 {
-		return apiparams.StartJobResponse{}, errors.E(errors.CodeBadRequest, "cannot destroy controller with models")
+		return apiparams.StartJobResponse{}, errors.New("cannot destroy controller with models").WithCode(errors.CodeBadRequest)
 	}
 
 	jobID, err := r.jimm.BootstrapManager().StartDestroyControllerJob(ctx, r.user, bootstrap.DestroyControllerParams{
@@ -695,7 +695,7 @@ func (r *controllerRoot) StartDestroyControllerJob(ctx context.Context, req apip
 		CACertificate:  ctrl.CACertificate,
 	})
 	if err != nil {
-		return apiparams.StartJobResponse{}, errors.E(fmt.Errorf("failed to start destroy-controller job: %v", err))
+		return apiparams.StartJobResponse{}, errors.Newf("failed to start destroy-controller job: %v", err)
 	}
 
 	return apiparams.StartJobResponse{

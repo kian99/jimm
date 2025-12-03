@@ -29,33 +29,33 @@ func (c Connection) Offer(ctx context.Context, offerURL crossmodel.OfferURL, off
 		// created offer
 		err := c.Call(ctx, "ApplicationOffers", 4, "", "Offer", &args, &resp)
 		if err != nil {
-			return errors.E(jujuerrors.Cause(err))
+			return jujuerrors.Cause(err)
 		}
 		if resp.Results[0].Error != nil {
-			return errors.E(resp.Results[0].Error)
+			return resp.Results[0].Error
 		}
 	} else {
 		ownerTag, err := names.ParseUserTag(offer.OwnerTag)
 		if err != nil {
-			return errors.E(errors.CodeBadRequest, err)
+			return errors.Wrap(err).WithCode(errors.CodeBadRequest)
 		}
 
 		// Facade call version 2 will not grant owner admin access, so
 		// we have to do it ourselves.
 		err = c.Call(ctx, "ApplicationOffers", 2, "", "Offer", &args, &resp)
 		if err != nil {
-			return errors.E(jujuerrors.Cause(err))
+			return jujuerrors.Cause(err)
 		}
 		if len(resp.Results) == 0 {
-			return errors.E("unknown error - no results returned")
+			return errors.New("unknown error - no results returned")
 		}
 		if resp.Results[0].Error != nil {
-			return errors.E(resp.Results[0].Error)
+			return resp.Results[0].Error
 		}
 
 		// Ensure the user creating the offer is an admin for the offer.
 		if err := c.GrantApplicationOfferAccess(ctx, offerURL.String(), ownerTag, jujuparams.OfferAdminAccess); err != nil {
-			return errors.E(err)
+			return err
 		}
 	}
 	return nil
@@ -73,7 +73,7 @@ func (c Connection) ListApplicationOffers(ctx context.Context, filters []jujupar
 	var resp jujuparams.QueryApplicationOffersResultsV5
 	err := c.CallHighestFacadeVersion(ctx, "ApplicationOffers", []int{5}, "", "ListApplicationOffers", &args, &resp)
 	if err != nil {
-		return nil, errors.E(jujuerrors.Cause(err))
+		return nil, jujuerrors.Cause(err)
 	}
 	return resp.Results, nil
 }
@@ -90,7 +90,7 @@ func (c Connection) FindApplicationOffers(ctx context.Context, filters []jujupar
 	var resp jujuparams.QueryApplicationOffersResultsV5
 	err := c.CallHighestFacadeVersion(ctx, "ApplicationOffers", []int{5}, "", "FindApplicationOffers", &args, &resp)
 	if err != nil {
-		return nil, errors.E(jujuerrors.Cause(err))
+		return nil, jujuerrors.Cause(err)
 	}
 	return resp.Results, nil
 }
@@ -111,10 +111,10 @@ func (c Connection) GetApplicationOffer(ctx context.Context, info *jujuparams.Ap
 	}
 	err := c.CallHighestFacadeVersion(ctx, "ApplicationOffers", []int{5}, "", "ApplicationOffers", &args, &resp)
 	if err != nil {
-		return errors.E(jujuerrors.Cause(err))
+		return jujuerrors.Cause(err)
 	}
 	if resp.Results[0].Error != nil {
-		return errors.E(resp.Results[0].Error)
+		return resp.Results[0].Error
 	}
 	*info = *resp.Results[0].Result
 	return nil
@@ -139,10 +139,10 @@ func (c Connection) GrantApplicationOfferAccess(ctx context.Context, offerURL st
 	}
 	err := c.CallHighestFacadeVersion(ctx, "ApplicationOffers", []int{5}, "", "ModifyOfferAccess", &args, &resp)
 	if err != nil {
-		return errors.E(jujuerrors.Cause(err))
+		return jujuerrors.Cause(err)
 	}
 	if resp.Results[0].Error != nil {
-		return errors.E(resp.Results[0].Error)
+		return resp.Results[0].Error
 	}
 	return nil
 }
@@ -166,10 +166,10 @@ func (c Connection) RevokeApplicationOfferAccess(ctx context.Context, offerURL s
 	}
 	err := c.CallHighestFacadeVersion(ctx, "ApplicationOffers", []int{5}, "", "ModifyOfferAccess", &args, &resp)
 	if err != nil {
-		return errors.E(jujuerrors.Cause(err))
+		return jujuerrors.Cause(err)
 	}
 	if resp.Results[0].Error != nil {
-		return errors.E(resp.Results[0].Error)
+		return resp.Results[0].Error
 	}
 	return nil
 }
@@ -189,10 +189,10 @@ func (c Connection) DestroyApplicationOffer(ctx context.Context, offer string, f
 	}
 	err := c.CallHighestFacadeVersion(ctx, "ApplicationOffers", []int{5}, "", "DestroyOffers", &args, &resp)
 	if err != nil {
-		return errors.E(jujuerrors.Cause(err))
+		return jujuerrors.Cause(err)
 	}
 	if resp.Results[0].Error != nil {
-		return errors.E(resp.Results[0].Error)
+		return resp.Results[0].Error
 	}
 	return nil
 }
@@ -218,10 +218,10 @@ func (c Connection) GetApplicationOfferConsumeDetails(ctx context.Context, user 
 	}
 	err := c.CallHighestFacadeVersion(ctx, "ApplicationOffers", []int{5}, "", "GetConsumeDetails", &args, &resp)
 	if err != nil {
-		return errors.E(jujuerrors.Cause(err))
+		return jujuerrors.Cause(err)
 	}
 	if resp.Results[0].Error != nil {
-		return errors.E(resp.Results[0].Error)
+		return resp.Results[0].Error
 	}
 	*info = resp.Results[0].ConsumeOfferDetails
 	return nil

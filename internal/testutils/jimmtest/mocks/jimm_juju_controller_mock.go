@@ -29,63 +29,63 @@ type ControllerService struct {
 
 func (j *ControllerService) AddController(ctx context.Context, u *openfga.User, ctl *dbmodel.Controller, creds juju.ControllerCreds) error {
 	if j.AddController_ == nil {
-		return errors.E(errors.CodeNotImplemented)
+		return errors.New("").WithCode(errors.CodeNotImplemented)
 	}
 	return j.AddController_(ctx, u, ctl, creds)
 }
 
 func (j *ControllerService) ControllerDetailsForModel(ctx context.Context, modelUUID string) (juju.ControllerConnectionDetails, error) {
 	if j.ControllerDetailsForModel_ == nil {
-		return juju.ControllerConnectionDetails{}, errors.E(errors.CodeNotImplemented)
+		return juju.ControllerConnectionDetails{}, errors.New("").WithCode(errors.CodeNotImplemented)
 	}
 	return j.ControllerDetailsForModel_(ctx, modelUUID)
 }
 
 func (j *ControllerService) ControllerDetailsForIncomingModel(ctx context.Context, modelUUID string) (juju.ControllerConnectionDetails, error) {
 	if j.ControllerDetailsForIncomingModel_ == nil {
-		return juju.ControllerConnectionDetails{}, errors.E(errors.CodeNotImplemented)
+		return juju.ControllerConnectionDetails{}, errors.New("").WithCode(errors.CodeNotImplemented)
 	}
 	return j.ControllerDetailsForIncomingModel_(ctx, modelUUID)
 }
 
 func (j *ControllerService) ControllerInfo(ctx context.Context, name string) (*dbmodel.Controller, error) {
 	if j.ControllerInfo_ == nil {
-		return nil, errors.E(errors.CodeNotImplemented)
+		return nil, errors.New("").WithCode(errors.CodeNotImplemented)
 	}
 	return j.ControllerInfo_(ctx, name)
 }
 
 func (j *ControllerService) EarliestControllerVersion(ctx context.Context) (version.Number, error) {
 	if j.EarliestControllerVersion_ == nil {
-		return version.Number{}, errors.E(errors.CodeNotImplemented)
+		return version.Number{}, errors.New("").WithCode(errors.CodeNotImplemented)
 	}
 	return j.EarliestControllerVersion_(ctx)
 }
 
 func (j *ControllerService) ListControllers(ctx context.Context, user *openfga.User) ([]dbmodel.Controller, error) {
 	if j.ListControllers_ == nil {
-		return nil, errors.E(errors.CodeNotImplemented)
+		return nil, errors.New("").WithCode(errors.CodeNotImplemented)
 	}
 	return j.ListControllers_(ctx, user)
 }
 
 func (j *ControllerService) RemoveController(ctx context.Context, user *openfga.User, controllerName string, force bool) error {
 	if j.RemoveController_ == nil {
-		return errors.E(errors.CodeNotImplemented)
+		return errors.New("").WithCode(errors.CodeNotImplemented)
 	}
 	return j.RemoveController_(ctx, user, controllerName, force)
 }
 
 func (j *ControllerService) SetControllerDeprecated(ctx context.Context, user *openfga.User, controllerName string, deprecated bool) error {
 	if j.SetControllerDeprecated_ == nil {
-		return errors.E(errors.CodeNotImplemented)
+		return errors.New("").WithCode(errors.CodeNotImplemented)
 	}
 	return j.SetControllerDeprecated_(ctx, user, controllerName, deprecated)
 }
 
 func (j *ControllerService) ControllerConfig(ctx context.Context, controllerName string) (jujucontroller.Config, error) {
 	if j.ControllerConfig_ == nil {
-		return jujucontroller.Config{}, errors.E(errors.CodeNotImplemented)
+		return jujucontroller.Config{}, errors.New("").WithCode(errors.CodeNotImplemented)
 	}
 	return j.ControllerConfig_(ctx, controllerName)
 }

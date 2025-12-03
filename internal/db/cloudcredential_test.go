@@ -250,7 +250,7 @@ var forEachCloudCredentialTests = []struct {
 	name:     "IterationError",
 	username: "alice@canonical.com",
 	f: func(*dbmodel.CloudCredential) error {
-		return errors.E("test error", errors.Code("test code"))
+		return errors.New("test error").WithCode(errors.Code("test code"))
 	},
 	expectError:     "test error",
 	expectErrorCode: "test code",

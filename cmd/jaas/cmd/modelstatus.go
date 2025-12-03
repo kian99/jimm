@@ -68,11 +68,11 @@ func (c *modelStatusCommand) SetFlags(f *gnuflag.FlagSet) {
 // Init implements the cmd.Command interface.
 func (c *modelStatusCommand) Init(args []string) error {
 	if len(args) < 1 {
-		return errors.E("missing model uuid")
+		return errors.New("missing model uuid")
 	}
 	c.modelUUID, args = args[0], args[1:]
 	if len(args) > 0 {
-		return errors.E("unknown arguments")
+		return errors.New("unknown arguments")
 	}
 	return nil
 }
@@ -81,7 +81,7 @@ func (c *modelStatusCommand) Init(args []string) error {
 func (c *modelStatusCommand) Run(ctxt *cmd.Context) error {
 	currentController, err := c.store.CurrentController()
 	if err != nil {
-		return errors.E(err, "could not determine controller")
+		return errors.Wrap(err).WithMessage("could not determine controller")
 	}
 
 	modelTag := names.NewModelTag(c.modelUUID)
@@ -95,12 +95,12 @@ func (c *modelStatusCommand) Run(ctxt *cmd.Context) error {
 		ModelTag: modelTag.String(),
 	})
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	err = c.out.Write(ctxt, status)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	return nil
 }

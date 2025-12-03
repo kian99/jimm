@@ -151,7 +151,7 @@ func (j *Tracker) GetJob(ctx context.Context, jobId uuid.UUID) (dbmodel.JobTrack
 	job := dbmodel.JobTrackerEntry{JobID: jobId}
 	err := j.store.GetJob(ctx, &job)
 	if err != nil {
-		return job, errors.E("failed to get job info", err)
+		return job, errors.Wrap(err).WithMessage("failed to get job info")
 	}
 
 	return job, nil
@@ -161,7 +161,7 @@ func (j *Tracker) GetJob(ctx context.Context, jobId uuid.UUID) (dbmodel.JobTrack
 func (j *Tracker) StopJob(ctx context.Context, jobId uuid.UUID) error {
 
 	if err := j.store.StopJob(ctx, jobId); err != nil {
-		return errors.E("failed to stop job", err)
+		return errors.Wrap(err).WithMessage("failed to stop job")
 	}
 
 	return nil

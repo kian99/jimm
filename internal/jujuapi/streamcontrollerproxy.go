@@ -39,11 +39,11 @@ type streamControllerProxier struct {
 func (s streamControllerProxier) Authenticate(ctx context.Context, w http.ResponseWriter, req *http.Request) (context.Context, error) {
 	_, password, ok := req.BasicAuth()
 	if !ok {
-		return ctx, errors.E(errors.CodeUnauthorized, "authentication missing")
+		return ctx, errors.New("authentication missing").WithCode(errors.CodeUnauthorized)
 	}
 	jwtToken, err := s.jimm.OAuthAuthenticator.VerifySessionToken(password)
 	if err != nil {
-		return ctx, errors.E(errors.CodeUnauthorized, err)
+		return ctx, errors.Wrap(err).WithCode(errors.CodeUnauthorized)
 	}
 	email := jwtToken.Subject()
 	ctx = auth.ContextWithSessionIdentity(ctx, email)

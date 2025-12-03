@@ -6,7 +6,6 @@ package upgrade
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -65,16 +64,16 @@ func NewUpgradeManager(
 	dialer juju.Dialer,
 ) (*upgradeManager, error) {
 	if bootstrapManager == nil {
-		return nil, errors.E("bootstrap manager cannot be nil")
+		return nil, errors.New("bootstrap manager cannot be nil")
 	}
 	if jujumanager == nil {
-		return nil, errors.E("juju manager cannot be nil")
+		return nil, errors.New("juju manager cannot be nil")
 	}
 	if store == nil {
-		return nil, errors.E("store cannot be nil")
+		return nil, errors.New("store cannot be nil")
 	}
 	if dialer == nil {
-		return nil, errors.E("dialer cannot be nil")
+		return nil, errors.New("dialer cannot be nil")
 	}
 	return &upgradeManager{
 		bootstrapManager: bootstrapManager,
@@ -96,50 +95,50 @@ func (u *upgradeManager) PrepareUpgradeTo(ctx context.Context, modelUUID string,
 
 	m, err := u.jujuManager.GetModel(ctx, modelUUID)
 	if err != nil {
-		return bootstrapCloud, bootstrapCredential, errors.E(err)
+		return bootstrapCloud, bootstrapCredential, err
 	}
 
 	currentVersion, err := version.Parse(m.Controller.AgentVersion)
 	if err != nil {
-		return bootstrapCloud, bootstrapCredential, errors.E(err)
+		return bootstrapCloud, bootstrapCredential, err
 	}
 
 	if currentVersion.Compare(targetVersion) >= 0 {
-		return bootstrapCloud, bootstrapCredential, errors.E(errors.CodeBadRequest, "target version must be greater than current version")
+		return bootstrapCloud, bootstrapCredential, errors.New("target version must be greater than current version").WithCode(errors.CodeBadRequest)
 	}
 
 	api, err := u.dialer.Dial(ctx, &m.Controller, names.ModelTag{}, nil, nil)
 	if err != nil {
-		return bootstrapCloud, bootstrapCredential, errors.E(fmt.Errorf("failed to dial the controller: %w", err))
+		return bootstrapCloud, bootstrapCredential, errors.Newf("failed to dial the controller: %w", err)
 	}
 
 	var ctrlModelSummary jujuparams.ModelSummary
 	if err := api.ControllerModelSummary(ctx, &ctrlModelSummary); err != nil {
-		return bootstrapCloud, bootstrapCredential, errors.E(fmt.Errorf("failed to get controller model summary: %w", err))
+		return bootstrapCloud, bootstrapCredential, errors.Newf("failed to get controller model summary: %w", err)
 	}
 
 	ctrlCloud, err := names.ParseCloudTag(ctrlModelSummary.CloudTag)
 	if err != nil {
-		return bootstrapCloud, bootstrapCredential, errors.E(fmt.Errorf("failed to parse cloud tag from controller model summary: %w", err))
+		return bootstrapCloud, bootstrapCredential, errors.Newf("failed to parse cloud tag from controller model summary: %w", err)
 	}
 	ctrlCloudCred, err := names.ParseCloudCredentialTag(ctrlModelSummary.CloudCredentialTag)
 	if err != nil {
-		return bootstrapCloud, bootstrapCredential, errors.E(fmt.Errorf("failed to parse cloud credential tag from controller model summary: %w", err))
+		return bootstrapCloud, bootstrapCredential, errors.Newf("failed to parse cloud credential tag from controller model summary: %w", err)
 	}
 
 	credentialContents, err := api.CredentialContents(ctrlCloud.Id(), ctrlCloudCred.Id(), true)
 	if err != nil {
-		return bootstrapCloud, bootstrapCredential, errors.E(fmt.Errorf("failed to get credential contents from controller model summary: %w", err))
+		return bootstrapCloud, bootstrapCredential, errors.Newf("failed to get credential contents from controller model summary: %w", err)
 	}
 
 	// The client actually returns an error if this is 0 and no error returned, but to be defensive we're checking
 	// anyways.
 	if len(credentialContents) == 0 {
-		return bootstrapCloud, bootstrapCredential, errors.E("no credential contents found for controller cloud credential")
+		return bootstrapCloud, bootstrapCredential, errors.New("no credential contents found for controller cloud credential")
 	}
 
 	if credentialContents[0].Error != nil {
-		return bootstrapCloud, bootstrapCredential, errors.E(fmt.Errorf("credential content error: %w", credentialContents[0].Error))
+		return bootstrapCloud, bootstrapCredential, errors.Newf("credential content error: %w", credentialContents[0].Error)
 	}
 
 	bootstrapCredential = jujucloud.NewCredential(
@@ -148,15 +147,15 @@ func (u *upgradeManager) PrepareUpgradeTo(ctx context.Context, modelUUID string,
 	)
 
 	if err := api.Cloud(ctrlCloud, &bootstrapCloud); err != nil {
-		return bootstrapCloud, bootstrapCredential, errors.E(fmt.Errorf("failed to get cloud from controller model summary: %w", err))
+		return bootstrapCloud, bootstrapCredential, errors.Newf("failed to get cloud from controller model summary: %w", err)
 	}
 
 	if !bootstrapCloud.IsControllerCloud {
-		return bootstrapCloud, bootstrapCredential, errors.E("controller cloud is not marked as a controller cloud")
+		return bootstrapCloud, bootstrapCredential, errors.New("controller cloud is not marked as a controller cloud")
 	}
 
 	if !bootstrapCloud.IsControllerCloud {
-		return bootstrapCloud, bootstrapCredential, errors.E("controller cloud is not marked as a controller cloud")
+		return bootstrapCloud, bootstrapCredential, errors.New("controller cloud is not marked as a controller cloud")
 	}
 
 	return bootstrapCloud, bootstrapCredential, nil
@@ -166,7 +165,7 @@ func (u *upgradeManager) PrepareUpgradeTo(ctx context.Context, modelUUID string,
 // a bootstrap job with that configuration, then waits for the bootstrap to complete.
 func (u *upgradeManager) CloneController(ctx context.Context, user *openfga.User, params CloneControllerParams) error {
 	if user == nil {
-		return errors.E("user cannot be nil")
+		return errors.New("user cannot be nil")
 	}
 
 	zapctx.Info(ctx, "starting controller upgrade", zap.String("controller-name", params.ControllerName))
@@ -181,15 +180,15 @@ func (u *upgradeManager) CloneController(ctx context.Context, user *openfga.User
 		UserConfig:         params.UserConfig,
 	})
 	if err != nil {
-		return errors.E(fmt.Errorf("failed to start bootstrap job: %w", err))
+		return errors.Newf("failed to start bootstrap job: %w", err)
 	}
 	parsedJobId, err := uuid.Parse(jobId)
 	if err != nil {
-		return errors.E(fmt.Errorf("failed to parse bootstrap job ID: %w", err))
+		return errors.Newf("failed to parse bootstrap job ID: %w", err)
 	}
 	// Wait for the bootstrap job to complete
 	if err := u.bootstrapManager.WaitForJobCompletion(ctx, parsedJobId, bootstrap.WaitConfig{}); err != nil {
-		return errors.E(fmt.Errorf("bootstrap job failed: %w", err))
+		return errors.Newf("bootstrap job failed: %w", err)
 	}
 
 	return nil
@@ -203,12 +202,12 @@ func (u *upgradeManager) MigrateAndUpgradeModel(ctx context.Context, user *openf
 
 	iimResult, err := u.jujuManager.InitiateInternalMigration(ctx, user, modelUUID, targetControllerName)
 	if err != nil {
-		return controllerChosenVersion, errors.E(fmt.Errorf("failed to initiate internal migration for upgrade: %w", err))
+		return controllerChosenVersion, errors.Newf("failed to initiate internal migration for upgrade: %w", err)
 	}
 
 	mt, err := names.ParseModelTag(iimResult.ModelTag)
 	if err != nil {
-		return controllerChosenVersion, errors.E(fmt.Errorf("failed to parse model tag from initiate internal migration result: %w", err))
+		return controllerChosenVersion, errors.Newf("failed to parse model tag from initiate internal migration result: %w", err)
 	}
 
 	var mi *jujuparams.ModelInfo
@@ -229,7 +228,7 @@ func (u *upgradeManager) MigrateAndUpgradeModel(ctx context.Context, user *openf
 
 				// It hasn't migrated yet, so error out.
 				if m.Controller.Name != targetControllerName {
-					return errors.E("model has not yet migrated to target controller")
+					return errors.New("model has not yet migrated to target controller")
 				}
 
 				return nil
@@ -237,17 +236,17 @@ func (u *upgradeManager) MigrateAndUpgradeModel(ctx context.Context, user *openf
 			Clock: clock.WallClock,
 		},
 	); err != nil {
-		return controllerChosenVersion, errors.E(fmt.Errorf("failed to confirm internal migration completed: %w", err))
+		return controllerChosenVersion, errors.Newf("failed to confirm internal migration completed: %w", err)
 	}
 
 	dbCtrl := &dbmodel.Controller{Name: targetControllerName}
 	if err := u.store.GetController(ctx, dbCtrl); err != nil {
-		return controllerChosenVersion, errors.E(errors.CodeNotFound, err, "controller not found")
+		return controllerChosenVersion, errors.Wrap(err).WithMessage("controller not found").WithCode(errors.CodeNotFound)
 	}
 
 	api, err := u.dialer.Dial(ctx, dbCtrl, names.ModelTag{}, nil, nil)
 	if err != nil {
-		return controllerChosenVersion, errors.E(fmt.Errorf("failed to dial target controller: %w", err))
+		return controllerChosenVersion, errors.Newf("failed to dial target controller: %w", err)
 	}
 
 	var upgradeErr error
@@ -264,7 +263,7 @@ func (u *upgradeManager) MigrateAndUpgradeModel(ctx context.Context, user *openf
 	}
 
 	if upgradeErr != nil {
-		return controllerChosenVersion, errors.E(fmt.Errorf("failed to upgrade model after migration: %w", upgradeErr))
+		return controllerChosenVersion, errors.Newf("failed to upgrade model after migration: %w", upgradeErr)
 	}
 
 	zapctx.Info(ctx, "model migrate and upgrade complete",

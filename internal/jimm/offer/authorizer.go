@@ -23,10 +23,10 @@ type offerAuthorizer struct {
 // check if a user is a consumer of an application offer.
 func NewOfferAuthorizer(store *db.Database, authSvc *openfga.OFGAClient) (*offerAuthorizer, error) {
 	if store == nil {
-		return nil, errors.E("group store cannot be nil")
+		return nil, errors.New("group store cannot be nil")
 	}
 	if authSvc == nil {
-		return nil, errors.E("group authorisation service cannot be nil")
+		return nil, errors.New("group authorisation service cannot be nil")
 	}
 	return &offerAuthorizer{store, authSvc}, nil
 }

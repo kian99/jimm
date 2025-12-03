@@ -5,7 +5,6 @@ package auditlog
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
@@ -32,13 +31,13 @@ type auditLogManager struct {
 // creation, and removal.
 func NewAuditLogManager(store *db.Database, authSvc *openfga.OFGAClient, jimmTag names.ControllerTag, retentionDays int) (*auditLogManager, error) {
 	if store == nil {
-		return nil, errors.E("auditlog store cannot be nil")
+		return nil, errors.New("auditlog store cannot be nil")
 	}
 	if authSvc == nil {
-		return nil, errors.E("auditlog authorisation service cannot be nil")
+		return nil, errors.New("auditlog authorisation service cannot be nil")
 	}
 	if jimmTag.String() == "" {
-		return nil, errors.E("auditlog jimm tag cannot be empty")
+		return nil, errors.New("auditlog jimm tag cannot be empty")
 	}
 	return &auditLogManager{store, authSvc, jimmTag, retentionDays}, nil
 }
@@ -81,7 +80,7 @@ func (j *auditLogManager) FindAuditEvents(ctx context.Context, user *openfga.Use
 
 	access := user.GetAuditLogViewerAccess(ctx, j.jimmTag)
 	if access != ofganames.AuditLogViewerRelation {
-		return nil, errors.E(errors.CodeUnauthorized, "unauthorized")
+		return nil, errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 
 	var entries []dbmodel.AuditLogEntry
@@ -90,7 +89,7 @@ func (j *auditLogManager) FindAuditEvents(ctx context.Context, user *openfga.Use
 		return nil
 	})
 	if err != nil {
-		return nil, errors.E(err)
+		return nil, err
 	}
 
 	return entries, nil
@@ -101,11 +100,11 @@ func (j *auditLogManager) FindAuditEvents(ctx context.Context, user *openfga.Use
 // returned.
 func (j *auditLogManager) PurgeLogs(ctx context.Context, user *openfga.User, before time.Time) (int64, error) {
 	if !user.JimmAdmin {
-		return 0, errors.E(errors.CodeUnauthorized, "unauthorized")
+		return 0, errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 	}
 	count, err := j.store.DeleteAuditLogsBefore(ctx, before)
 	if err != nil {
-		return 0, errors.E(fmt.Errorf("failed to purge logs: %w", err))
+		return 0, errors.Newf("failed to purge logs: %w", err)
 	}
 	return count, nil
 }

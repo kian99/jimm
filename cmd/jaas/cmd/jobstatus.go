@@ -74,11 +74,11 @@ func (c *jobStatusCommand) SetFlags(f *gnuflag.FlagSet) {
 // Init implements the cmd.Command interface.
 func (c *jobStatusCommand) Init(args []string) error {
 	if len(args) < 1 {
-		return errors.E("missing job id")
+		return errors.New("missing job id")
 	}
 	c.jobId, args = args[0], args[1:]
 	if len(args) > 0 {
-		return errors.E("unknown arguments")
+		return errors.New("unknown arguments")
 	}
 
 	c.sleepBetweenGetLogs = sleepBetweenGetLogs
@@ -120,12 +120,12 @@ func (p logPoller) watchJobLogs() error {
 			Watermark: watermark,
 		})
 		if err != nil {
-			return errors.E(err, "failed to get job info")
+			return errors.Wrap(err).WithMessage("failed to get job info")
 		}
 		for _, log := range response.Logs {
 			_, err = p.out.Write([]byte(log + "\n"))
 			if err != nil {
-				return errors.E(err, "failed to write job log")
+				return errors.Wrap(err).WithMessage("failed to write job log")
 			}
 		}
 		watermark = response.Watermark
@@ -135,22 +135,22 @@ func (p logPoller) watchJobLogs() error {
 		case params.StatusSuccessful:
 			_, err = p.out.Write([]byte("Job completed successfully.\n"))
 			if err != nil {
-				return errors.E(err, "failed to write job success message")
+				return errors.Wrap(err).WithMessage("failed to write job success message")
 			}
 			return nil
 		case params.StatusFailed:
 			_, err = p.out.Write([]byte("Job failed: " + response.Error + "\n"))
 			if err != nil {
-				return errors.E(err, "failed to write job error")
+				return errors.Wrap(err).WithMessage("failed to write job error")
 			}
 			return nil
 		case params.StatusPending:
 			_, err := p.out.Write([]byte("Job is pending...\n"))
 			if err != nil {
-				return errors.E(err, "failed to write job pending message")
+				return errors.Wrap(err).WithMessage("failed to write job pending message")
 			}
 		default:
-			return errors.E("unknown job status: %s", response.Status)
+			return errors.Newf("unknown job status: %s", response.Status)
 		}
 		if !p.follow {
 			return nil
@@ -162,7 +162,7 @@ func (p logPoller) watchJobLogs() error {
 func (s *jobStatusCommand) newClient() (JIMMAPI, error) {
 	currentController, err := s.store.CurrentController()
 	if err != nil {
-		return nil, errors.E(err, "could not determine controller")
+		return nil, errors.Wrap(err).WithMessage("could not determine controller")
 	}
 
 	apiCaller, err := s.NewAPIRootWithDialOpts(s.store, currentController, "", s.dialOpts)

@@ -91,11 +91,11 @@ func (r *controllerRoot) DumpModels(ctx context.Context, args jujuparams.DumpMod
 		mt, err := names.ParseModelTag(ent.Tag)
 		ctx = zapctx.WithFields(ctx, zap.String("entity", mt.String()))
 		if err != nil {
-			results[i].Error = r.mapError(ctx, errors.E(err, errors.CodeBadRequest))
+			results[i].Error = r.mapError(ctx, errors.Wrap(err).WithCode(errors.CodeBadRequest))
 		}
 		results[i].Result, err = r.jimm.JujuManager().DumpModel(ctx, r.user, mt, args.Simplified)
 		if err != nil {
-			results[i].Error = r.mapError(ctx, errors.E(err))
+			results[i].Error = r.mapError(ctx, err)
 		}
 	}
 	return jujuparams.StringResults{
@@ -113,7 +113,7 @@ func (r *controllerRoot) ListModelSummaries(ctx context.Context, _ jujuparams.Mo
 	}
 	res, err := r.jimm.JujuManager().ListModelSummaries(ctx, r.user, maskingControllerUUID)
 	if err != nil {
-		return jujuparams.ModelSummaryResults{}, errors.E(err)
+		return jujuparams.ModelSummaryResults{}, err
 	}
 
 	return res, nil
@@ -159,7 +159,7 @@ func (r *controllerRoot) ModelInfo(ctx context.Context, args jujuparams.Entities
 		mt, err := names.ParseModelTag(arg.Tag)
 		ctx = zapctx.WithFields(ctx, zap.String("entity", mt.String()))
 		if err != nil {
-			results[i].Error = r.mapError(ctx, errors.E(err, errors.CodeBadRequest))
+			results[i].Error = r.mapError(ctx, errors.Wrap(err).WithCode(errors.CodeBadRequest))
 			continue
 		}
 		results[i].Result, err = r.jimm.JujuManager().ModelInfo(ctx, r.user, mt)
@@ -167,9 +167,9 @@ func (r *controllerRoot) ModelInfo(ctx context.Context, args jujuparams.Entities
 			if errors.ErrorCode(err) == errors.CodeNotFound {
 				// Map not-found errors to unauthorized, this is what juju
 				// does.
-				err = errors.E(errors.CodeUnauthorized, "unauthorized")
+				err = errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 			}
-			results[i].Error = r.mapError(ctx, errors.E(err))
+			results[i].Error = r.mapError(ctx, err)
 		} else if r.controllerUUIDMasking {
 			results[i].Result.ControllerUUID = r.params.ControllerUUID
 		}
@@ -187,12 +187,12 @@ func (r *controllerRoot) CreateModel(ctx context.Context, args jujuparams.ModelC
 
 	var mca juju.ModelCreateArgs
 	if err := mca.FromJujuModelCreateArgs(&args); err != nil {
-		return jujuparams.ModelInfo{}, errors.E(err)
+		return jujuparams.ModelInfo{}, err
 	}
 	info, err := r.jimm.JujuManager().AddModel(ctx, r.user, &mca)
 	if err != nil {
 		servermon.ModelsCreatedFailCount.Inc()
-		return jujuparams.ModelInfo{}, errors.E(err)
+		return jujuparams.ModelInfo{}, err
 	}
 
 	servermon.ModelsCreatedCount.Inc()
@@ -214,7 +214,7 @@ func (r *controllerRoot) DestroyModels(ctx context.Context, args jujuparams.Dest
 		mt, err := names.ParseModelTag(model.ModelTag)
 		ctx = zapctx.WithFields(ctx, zap.String("entity", mt.String()))
 		if err != nil {
-			results[i].Error = r.mapError(ctx, errors.E(err, errors.CodeBadRequest))
+			results[i].Error = r.mapError(ctx, errors.Wrap(err).WithCode(errors.CodeBadRequest))
 			continue
 		}
 
@@ -222,7 +222,7 @@ func (r *controllerRoot) DestroyModels(ctx context.Context, args jujuparams.Dest
 			if errors.ErrorCode(err) != errors.CodeNotFound {
 				// It isn't an error to try and destroy an already
 				// destroyed model.
-				results[i].Error = r.mapError(ctx, errors.E(err))
+				results[i].Error = r.mapError(ctx, err)
 			}
 		}
 	}
@@ -242,12 +242,12 @@ func (r *controllerRoot) ModifyModelAccess(ctx context.Context, args jujuparams.
 		mt, err := names.ParseModelTag(change.ModelTag)
 		ctx = zapctx.WithFields(ctx, zap.String("entity", mt.String()))
 		if err != nil {
-			results[i].Error = r.mapError(ctx, errors.E(err, errors.CodeBadRequest))
+			results[i].Error = r.mapError(ctx, errors.Wrap(err).WithCode(errors.CodeBadRequest))
 			continue
 		}
 		user, err := parseUserTag(change.UserTag)
 		if err != nil {
-			results[i].Error = r.mapError(ctx, errors.E(err, errors.CodeBadRequest))
+			results[i].Error = r.mapError(ctx, errors.Wrap(err).WithCode(errors.CodeBadRequest))
 			continue
 		}
 		switch change.Action {
@@ -256,10 +256,10 @@ func (r *controllerRoot) ModifyModelAccess(ctx context.Context, args jujuparams.
 		case jujuparams.RevokeModelAccess:
 			err = r.jimm.PermissionManager().RevokeModelAccess(ctx, r.user, mt, user, change.Access)
 		default:
-			err = errors.E(errors.CodeBadRequest, fmt.Sprintf("invalid action %q", change.Action))
+			err = errors.New("").WithCode(errors.CodeBadRequest).WithMessagef("invalid action %q", change.Action)
 		}
 		if errors.ErrorCode(err) == errors.CodeNotFound {
-			err = errors.E(errors.CodeUnauthorized, "unauthorized")
+			err = errors.New("unauthorized").WithCode(errors.CodeUnauthorized)
 		}
 		results[i].Error = r.mapError(ctx, err)
 	}
@@ -280,11 +280,11 @@ func (r *controllerRoot) DumpModelsDB(ctx context.Context, args jujuparams.Entit
 		mt, err := names.ParseModelTag(ent.Tag)
 		ctx = zapctx.WithFields(ctx, zap.String("entity", mt.String()))
 		if err != nil {
-			results[i].Error = r.mapError(ctx, errors.E(err, errors.CodeBadRequest))
+			results[i].Error = r.mapError(ctx, errors.Wrap(err).WithCode(errors.CodeBadRequest))
 		}
 		results[i].Result, err = r.jimm.JujuManager().DumpModelDB(ctx, r.user, mt)
 		if err != nil {
-			results[i].Error = r.mapError(ctx, errors.E(err))
+			results[i].Error = r.mapError(ctx, err)
 		}
 	}
 	return jujuparams.MapResults{
@@ -312,14 +312,14 @@ func (r *controllerRoot) changeModelCredential(ctx context.Context, arg jujupara
 	mt, err := names.ParseModelTag(arg.ModelTag)
 	ctx = zapctx.WithFields(ctx, zap.String("entity", mt.String()))
 	if err != nil {
-		return errors.E(err, errors.CodeBadRequest)
+		return errors.Wrap(err).WithCode(errors.CodeBadRequest)
 	}
 	cct, err := names.ParseCloudCredentialTag(arg.CloudCredentialTag)
 	if err != nil {
-		return errors.E(err, errors.CodeBadRequest)
+		return errors.Wrap(err).WithCode(errors.CodeBadRequest)
 	}
 	if err := r.jimm.JujuManager().ChangeModelCredential(ctx, r.user, mt, cct); err != nil {
-		return errors.E(err)
+		return err
 	}
 	return nil
 }
@@ -336,7 +336,7 @@ func (r *controllerRoot) ValidateModelUpgrades(ctx context.Context, args jujupar
 		modelTag, err := names.ParseModelTag(arg.ModelTag)
 		ctx = zapctx.WithFields(ctx, zap.String("entity", modelTag.String()))
 		if err != nil {
-			results[i].Error = r.mapError(ctx, errors.E(err, errors.CodeBadRequest))
+			results[i].Error = r.mapError(ctx, errors.Wrap(err).WithCode(errors.CodeBadRequest))
 			continue
 		}
 		results[i].Error = r.mapError(ctx, r.jimm.JujuManager().ValidateModelUpgrade(ctx, r.user, modelTag, args.Force))
@@ -354,7 +354,7 @@ func (r *controllerRoot) SetModelDefaults(ctx context.Context, args jujuparams.S
 		cloudTag, err := names.ParseCloudTag(config.CloudTag)
 		ctx = zapctx.WithFields(ctx, zap.String("entity", cloudTag.String()))
 		if err != nil {
-			results[i].Error = r.mapError(ctx, errors.E(err))
+			results[i].Error = r.mapError(ctx, err)
 			continue
 		}
 		results[i].Error = r.mapError(ctx, r.jimm.JujuManager().SetModelDefaults(ctx, r.user.Identity, cloudTag, config.CloudRegion, config.Config))
@@ -393,12 +393,12 @@ func (r *controllerRoot) ModelDefaultsForClouds(ctx context.Context, args jujupa
 		cloudTag, err := names.ParseCloudTag(entity.Tag)
 		ctx = zapctx.WithFields(ctx, zap.String("entity", cloudTag.String()))
 		if err != nil {
-			result.Results[i].Error = r.mapError(ctx, errors.E(err))
+			result.Results[i].Error = r.mapError(ctx, err)
 			continue
 		}
 		defaults, err := r.jimm.JujuManager().ModelDefaultsForCloud(ctx, r.user.Identity, cloudTag)
 		if err != nil {
-			result.Results[i].Error = r.mapError(ctx, errors.E(err))
+			result.Results[i].Error = r.mapError(ctx, err)
 			continue
 		}
 		result.Results[i] = defaults

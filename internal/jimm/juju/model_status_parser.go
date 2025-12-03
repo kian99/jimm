@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	stderrors "errors"
-	"fmt"
 
 	"github.com/itchyny/gojq"
 	jujucmd "github.com/juju/cmd/v3"
@@ -36,7 +35,7 @@ func (j *JujuManager) QueryModelsJq(ctx context.Context, modelUUIDs []string, jq
 
 	query, err := gojq.Parse(jqQuery)
 	if err != nil {
-		return results, errors.E("failed to parse jq query", err)
+		return results, errors.Wrap(err).WithMessage("failed to parse jq query")
 	}
 
 	// Set up a formatterParamsRetriever to handle the heavy lifting
@@ -45,7 +44,7 @@ func (j *JujuManager) QueryModelsJq(ctx context.Context, modelUUIDs []string, jq
 
 	models, err := j.Database.GetModelsByUUID(ctx, modelUUIDs)
 	if err != nil {
-		return results, errors.E("failed to get models for user")
+		return results, errors.New("failed to get models for user")
 	}
 
 	for _, model := range models {
@@ -78,7 +77,7 @@ func (j *JujuManager) QueryModelsJq(ctx context.Context, modelUUIDs []string, jq
 		}
 		tempMap := make(map[string]any)
 		if err := json.Unmarshal(fb, &tempMap); err != nil {
-			return results, errors.E(err)
+			return results, err
 		}
 
 		queryCtx, cancel := context.WithTimeout(ctx, j.crossModelQueryTimeout)
@@ -96,7 +95,7 @@ func (j *JujuManager) QueryModelsJq(ctx context.Context, modelUUIDs []string, jq
 			// both erreoneous and valid query results.
 			if err, ok := v.(error); ok {
 				if stderrors.Is(err, context.DeadlineExceeded) {
-					return results, errors.E(fmt.Sprintf("jq query timed out after %.2f seconds", j.crossModelQueryTimeout.Seconds()), err)
+					return results, errors.Wrap(err).WithMessagef("jq query timed out after %.2f seconds", j.crossModelQueryTimeout.Seconds())
 				}
 				results.Errors[modelUUID] = append(results.Errors[modelUUID], "jq error: "+err.Error())
 				continue
@@ -163,7 +162,7 @@ func (f *formatterParamsRetriever) GetParams(ctx context.Context, model dbmodel.
 func (f *formatterParamsRetriever) dialModel(ctx context.Context) error {
 	modelTag, ok := f.model.Tag().(names.ModelTag)
 	if !ok {
-		return errors.E("failed to parse model tag")
+		return errors.New("failed to parse model tag")
 	}
 	api, err := f.jujuManager.dial(ctx, &f.model.Controller, modelTag, nil)
 	if err != nil {

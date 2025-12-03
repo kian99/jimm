@@ -15,7 +15,7 @@ func (d *Database) AddApplicationOffer(ctx context.Context, offer *dbmodel.Appli
 	const op = "db.AddApplicationOffer"
 
 	if err := d.ready(); err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
@@ -26,7 +26,7 @@ func (d *Database) AddApplicationOffer(ctx context.Context, offer *dbmodel.Appli
 
 	result := db.Create(offer)
 	if result.Error != nil {
-		return errors.E(dbError(result.Error))
+		return dbError(result.Error)
 	}
 	return nil
 }
@@ -37,7 +37,7 @@ func (d *Database) GetApplicationOffer(ctx context.Context, offer *dbmodel.Appli
 	const op = "db.GetApplicationOffer"
 
 	if err := d.ready(); err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
@@ -51,16 +51,16 @@ func (d *Database) GetApplicationOffer(ctx context.Context, offer *dbmodel.Appli
 	case offer.URL != "":
 		db = db.Where("url = ?", offer.URL)
 	default:
-		return errors.E("missing offer UUID or URL")
+		return errors.New("missing offer UUID or URL")
 	}
 
 	db = db.Preload("Model").Preload("Model.Controller")
 	if err := db.First(&offer).Error; err != nil {
 		err := dbError(err)
 		if errors.ErrorCode(err) == errors.CodeNotFound {
-			return errors.E(err, "application offer not found")
+			return errors.Wrap(err).WithMessage("application offer not found")
 		}
-		return errors.E(err)
+		return err
 	}
 	return nil
 }
@@ -70,7 +70,7 @@ func (d *Database) DeleteApplicationOffer(ctx context.Context, offer *dbmodel.Ap
 	const op = "db.DeleteApplicationOffer"
 
 	if err := d.ready(); err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
@@ -81,7 +81,7 @@ func (d *Database) DeleteApplicationOffer(ctx context.Context, offer *dbmodel.Ap
 
 	result := db.Delete(offer)
 	if result.Error != nil {
-		return errors.E(dbError(result.Error))
+		return dbError(result.Error)
 	}
 	return nil
 }
@@ -91,10 +91,10 @@ func (d *Database) FindApplicationOffersByModel(ctx context.Context, modelName, 
 	const op = "db.FindApplicationOfferByModel"
 
 	if modelName == "" || modelOwner == "" {
-		return nil, errors.E(errors.CodeBadRequest, "model name or owner not specified")
+		return nil, errors.New("model name or owner not specified").WithCode(errors.CodeBadRequest)
 	}
 	if err := d.ready(); err != nil {
-		return nil, errors.E(err)
+		return nil, err
 	}
 
 	durationObserver := servermon.DurationObserver(servermon.DBQueryDurationHistogram, op)
@@ -111,14 +111,14 @@ func (d *Database) FindApplicationOffersByModel(ctx context.Context, modelName, 
 	var offers []dbmodel.ApplicationOffer
 	result := db.Preload("Model").Find(&offers)
 	if result.Error != nil {
-		return nil, errors.E(dbError(result.Error))
+		return nil, dbError(result.Error)
 	}
 
 	for i, offer := range offers {
 		offer := offer
 		err := d.GetApplicationOffer(ctx, &offer)
 		if err != nil {
-			return nil, errors.E(dbError(err))
+			return nil, dbError(err)
 		}
 		offers[i] = offer
 	}

@@ -16,10 +16,10 @@ func (c Connection) ControllerConfig(ctx context.Context) (jujuparams.Controller
 
 	results := jujuparams.ControllerConfigResult{}
 	if err := c.CallHighestFacadeVersion(ctx, "Controller", []int{12}, "", "ControllerConfig", nil, &results); err != nil {
-		return jujuparams.ControllerConfigResult{}, errors.E(jujuerrors.Cause(err))
+		return jujuparams.ControllerConfigResult{}, jujuerrors.Cause(err)
 	}
 	if results.Config == nil {
-		return jujuparams.ControllerConfigResult{}, errors.E(errors.CodeNotFound, "controller config not found")
+		return jujuparams.ControllerConfigResult{}, errors.New("controller config not found").WithCode(errors.CodeNotFound)
 	}
 	return results, nil
 }

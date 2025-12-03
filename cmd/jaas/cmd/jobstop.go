@@ -59,11 +59,11 @@ func (c *jobStopCommand) Info() *cmd.Info {
 // Init implements the cmd.Command interface.
 func (c *jobStopCommand) Init(args []string) error {
 	if len(args) < 1 {
-		return errors.E("missing job id")
+		return errors.New("missing job id")
 	}
 	c.jobId, args = args[0], args[1:]
 	if len(args) > 0 {
-		return errors.E("unknown arguments")
+		return errors.New("unknown arguments")
 	}
 
 	return nil
@@ -92,7 +92,7 @@ func (c *jobStopCommand) Run(ctxt *cmd.Context) error {
 func (s *jobStopCommand) newClient() (JIMMAPI, error) {
 	currentController, err := s.store.CurrentController()
 	if err != nil {
-		return nil, errors.E(err, "could not determine controller")
+		return nil, errors.Wrap(err).WithMessage("could not determine controller")
 	}
 
 	apiCaller, err := s.NewAPIRootWithDialOpts(s.store, currentController, "", s.dialOpts)

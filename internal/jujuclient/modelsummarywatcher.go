@@ -7,8 +7,6 @@ import (
 
 	jujuerrors "github.com/juju/errors"
 	jujuparams "github.com/juju/juju/rpc/params"
-
-	"github.com/canonical/jimm/v3/internal/errors"
 )
 
 // SupportsModelSummaryWatcher reports whether the controller supports
@@ -25,7 +23,7 @@ func (c Connection) WatchAllModelSummaries(ctx context.Context) (string, error) 
 
 	var resp jujuparams.SummaryWatcherID
 	if err := c.CallHighestFacadeVersion(ctx, "Controller", []int{11}, "", "WatchAllModelSummaries", nil, &resp); err != nil {
-		return "", errors.E(jujuerrors.Cause(err))
+		return "", jujuerrors.Cause(err)
 	}
 	return resp.WatcherID, nil
 }
@@ -38,7 +36,7 @@ func (c Connection) ModelSummaryWatcherNext(ctx context.Context, id string) ([]j
 
 	var resp jujuparams.SummaryWatcherNextResults
 	if err := c.client.Call(ctx, "ModelSummaryWatcher", 1, id, "Next", nil, &resp); err != nil {
-		return nil, errors.E(jujuerrors.Cause(err))
+		return nil, jujuerrors.Cause(err)
 	}
 	return resp.Models, nil
 }
@@ -50,7 +48,7 @@ func (c Connection) ModelSummaryWatcherNext(ctx context.Context, id string) ([]j
 func (c Connection) ModelSummaryWatcherStop(ctx context.Context, id string) error {
 
 	if err := c.client.Call(ctx, "ModelSummaryWatcher", 1, id, "Stop", nil, nil); err != nil {
-		return errors.E(jujuerrors.Cause(err))
+		return jujuerrors.Cause(err)
 	}
 	return nil
 }

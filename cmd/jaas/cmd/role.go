@@ -94,11 +94,11 @@ func (c *addRoleCommand) SetFlags(f *gnuflag.FlagSet) {
 // Init implements the cmd.Command interface.
 func (c *addRoleCommand) Init(args []string) error {
 	if len(args) < 1 {
-		return errors.E("role name not specified")
+		return errors.New("role name not specified")
 	}
 	c.name, args = args[0], args[1:]
 	if len(args) > 0 {
-		return errors.E("too many args")
+		return errors.New("too many args")
 	}
 	return nil
 }
@@ -107,7 +107,7 @@ func (c *addRoleCommand) Init(args []string) error {
 func (c *addRoleCommand) Run(ctxt *cmd.Context) error {
 	currentController, err := c.store.CurrentController()
 	if err != nil {
-		return errors.E(err, "could not determine controller")
+		return errors.Wrap(err).WithMessage("could not determine controller")
 	}
 
 	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
@@ -120,12 +120,12 @@ func (c *addRoleCommand) Run(ctxt *cmd.Context) error {
 		Name: c.name,
 	})
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	err = c.out.Write(ctxt, resp)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 	return nil
 }
@@ -164,11 +164,11 @@ func (c *renameRoleCommand) Info() *cmd.Info {
 // Init implements the cmd.Command interface.
 func (c *renameRoleCommand) Init(args []string) error {
 	if len(args) < 2 {
-		return errors.E("role name not specified")
+		return errors.New("role name not specified")
 	}
 	c.name, c.newName, args = args[0], args[1], args[2:]
 	if len(args) > 0 {
-		return errors.E("too many args")
+		return errors.New("too many args")
 	}
 	return nil
 }
@@ -177,7 +177,7 @@ func (c *renameRoleCommand) Init(args []string) error {
 func (c *renameRoleCommand) Run(ctxt *cmd.Context) error {
 	currentController, err := c.store.CurrentController()
 	if err != nil {
-		return errors.E(err, "could not determine controller")
+		return errors.Wrap(err).WithMessage("could not determine controller")
 	}
 
 	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
@@ -193,7 +193,7 @@ func (c *renameRoleCommand) Run(ctxt *cmd.Context) error {
 	client := api.NewClient(apiCaller)
 	err = client.RenameRole(&params)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	return nil
@@ -234,11 +234,11 @@ func (c *removeRoleCommand) Info() *cmd.Info {
 // Init implements the cmd.Command interface.
 func (c *removeRoleCommand) Init(args []string) error {
 	if len(args) < 1 {
-		return errors.E("role name not specified")
+		return errors.New("role name not specified")
 	}
 	c.name, args = args[0], args[1:]
 	if len(args) > 0 {
-		return errors.E("too many args")
+		return errors.New("too many args")
 	}
 	return nil
 }
@@ -256,7 +256,7 @@ func (c *removeRoleCommand) SetFlags(f *gnuflag.FlagSet) {
 func (c *removeRoleCommand) Run(ctxt *cmd.Context) error {
 	currentController, err := c.store.CurrentController()
 	if err != nil {
-		return errors.E(err, "could not determine controller")
+		return errors.Wrap(err).WithMessage("could not determine controller")
 	}
 
 	if !c.force {
@@ -268,7 +268,7 @@ func (c *removeRoleCommand) Run(ctxt *cmd.Context) error {
 		}
 		text, err := reader.ReadString('\n')
 		if err != nil {
-			return errors.E(err, "Failed to read from input.")
+			return errors.Wrap(err).WithMessage("Failed to read from input.")
 		}
 		text = strings.ReplaceAll(text, "\n", "")
 		if text != "y" && text != "Y" {
@@ -288,7 +288,7 @@ func (c *removeRoleCommand) Run(ctxt *cmd.Context) error {
 	client := api.NewClient(apiCaller)
 	err = client.RemoveRole(&params)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	return nil
@@ -329,7 +329,7 @@ func (c *listRolesCommand) Info() *cmd.Info {
 // Init implements the cmd.Command interface.
 func (c *listRolesCommand) Init(args []string) error {
 	if len(args) > 1 {
-		return errors.E("too many args")
+		return errors.New("too many args")
 	}
 	return nil
 }
@@ -349,7 +349,7 @@ func (c *listRolesCommand) SetFlags(f *gnuflag.FlagSet) {
 func (c *listRolesCommand) Run(ctxt *cmd.Context) error {
 	currentController, err := c.store.CurrentController()
 	if err != nil {
-		return errors.E(err, "could not determine controller")
+		return errors.Wrap(err).WithMessage("could not determine controller")
 	}
 
 	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
@@ -361,12 +361,12 @@ func (c *listRolesCommand) Run(ctxt *cmd.Context) error {
 	req := apiparams.ListRolesRequest{Limit: c.limit, Offset: c.offset}
 	roles, err := client.ListRoles(&req)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	err = c.out.Write(ctxt, roles)
 	if err != nil {
-		return errors.E(err)
+		return err
 	}
 
 	return nil

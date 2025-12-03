@@ -139,7 +139,7 @@ func (s *jimmUnitTestSuite) TestBootstrapStatus(c *gc.C) {
 			return &mocks.BootstapManager{
 				GetJobInfo_: func(ctx context.Context, user *openfga.User, jobId uuid.UUID, offset int) (apiparams.GetJobInfoResponse, error) {
 					if jobId != uuidGenerated {
-						return apiparams.GetJobInfoResponse{}, errors.E(errors.CodeNotFound, "job not found")
+						return apiparams.GetJobInfoResponse{}, errors.New("job not found").WithCode(errors.CodeNotFound)
 					}
 					return apiparams.GetJobInfoResponse{
 						Status: "running",
@@ -223,7 +223,7 @@ func (s *jimmUnitTestSuite) TestBootstrapStart(c *gc.C) {
 	c.Assert(response.JobID, gc.Not(gc.Equals), "")
 
 	// Test start bootstrap fails
-	startBootstrapErr = errors.E("foo")
+	startBootstrapErr = errors.New("foo")
 	_, err = root.StartBootstrapJob(ctx, params)
 	c.Assert(err, gc.NotNil)
 	c.Assert(err.Error(), gc.Matches, "failed to start bootstrap job: foo")
@@ -244,7 +244,7 @@ func (s *jimmUnitTestSuite) TestBootstrapStop(c *gc.C) {
 			return &mocks.BootstapManager{
 				StopJob_: func(ctx context.Context, user *openfga.User, jobId uuid.UUID) error {
 					if jobId != uuidGenerated {
-						return errors.E(errors.CodeNotFound, "job not found")
+						return errors.New("job not found").WithCode(errors.CodeNotFound)
 					}
 					return nil
 				},
