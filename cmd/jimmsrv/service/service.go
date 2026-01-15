@@ -210,6 +210,10 @@ type Params struct {
 	// It should look something like:
 	// <scheme><ip/dns>[<port>]/.well-known/jwks.json"
 	BootstrapLoginTokenRefreshURL string
+	// BootstrapTrustedCACertPEM is an optional CA certificate bundle (PEM) that
+	// will be installed into the bootstrapped machine's trusted certificate pool
+	// via cloud-init.
+	BootstrapTrustedCACertPEM string
 }
 
 // A Service is the implementation of a JIMM server.
@@ -447,6 +451,7 @@ func NewService(ctx context.Context, p Params) (*Service, error) {
 	}
 
 	jimmParameters.BootstrapLoginTokenRefreshURL = p.BootstrapLoginTokenRefreshURL
+	jimmParameters.BootstrapTrustedCACertPEM = p.BootstrapTrustedCACertPEM
 
 	s.jimm, err = jimm.New(jimmParameters)
 	if err != nil {

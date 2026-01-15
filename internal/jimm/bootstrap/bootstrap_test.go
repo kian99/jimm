@@ -130,7 +130,7 @@ func (s *bootstrapManagerSuite) TestStartBootstrapJob_LoginTokenRefreshURLNotCon
 	ctx := c.Context()
 	ctrl, mocks, user := setupTest(c)
 	defer ctrl.Finish()
-	manager, err := bootstrap.NewBootstrapManager(s.db, s.jobTracker, mocks.jujuManager, mocks.binaryStore, "", mocks.credentialStore)
+	manager, err := bootstrap.NewBootstrapManager(s.db, s.jobTracker, mocks.jujuManager, mocks.binaryStore, "", "", mocks.credentialStore)
 	c.Assert(err, qt.IsNil)
 	_, err = manager.StartBootstrapJob(ctx, user, bootstrap.BootstrapParams{})
 	c.Assert(err, qt.ErrorMatches, "bootstrap login token refresh URL is not configured.*")
@@ -139,14 +139,14 @@ func (s *bootstrapManagerSuite) TestStartBootstrapJob_LoginTokenRefreshURLNotCon
 func (s *bootstrapManagerSuite) TestStartBootstrapJob_LoginTokenRefreshURLEmpty(c *qt.C) {
 	ctrl, mocks, _ := setupTest(c)
 	defer ctrl.Finish()
-	_, err := bootstrap.NewBootstrapManager(s.db, s.jobTracker, mocks.jujuManager, mocks.binaryStore, "", mocks.credentialStore)
+	_, err := bootstrap.NewBootstrapManager(s.db, s.jobTracker, mocks.jujuManager, mocks.binaryStore, "", "", mocks.credentialStore)
 	c.Assert(err, qt.IsNil)
 }
 
 func (s *bootstrapManagerSuite) TestStartBootstrapJob_LoginTokenRefreshURLMalformed(c *qt.C) {
 	ctrl, mocks, _ := setupTest(c)
 	defer ctrl.Finish()
-	_, err := bootstrap.NewBootstrapManager(s.db, s.jobTracker, mocks.jujuManager, mocks.binaryStore, ":/url/", mocks.credentialStore)
+	_, err := bootstrap.NewBootstrapManager(s.db, s.jobTracker, mocks.jujuManager, mocks.binaryStore, ":/url/", "", mocks.credentialStore)
 	c.Assert(err, qt.ErrorMatches, ".*failed to parse bootstrap login token refresh URL.*")
 }
 
@@ -160,7 +160,7 @@ func (s *bootstrapManagerSuite) TestGetJobInfo(c *qt.C) {
 	ctrl, mocks, _ := setupTest(c)
 	defer ctrl.Finish()
 
-	manager, err := bootstrap.NewBootstrapManager(s.db, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, mocks.credentialStore)
+	manager, err := bootstrap.NewBootstrapManager(s.db, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, "", mocks.credentialStore)
 	c.Assert(err, qt.IsNil)
 
 	numLogs := 101
@@ -216,7 +216,7 @@ func (s *bootstrapManagerSuite) TestGetJobInfo_JobFailed(c *qt.C) {
 	ctrl, mocks, _ := setupTest(c)
 	defer ctrl.Finish()
 
-	manager, err := bootstrap.NewBootstrapManager(s.db, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, mocks.credentialStore)
+	manager, err := bootstrap.NewBootstrapManager(s.db, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, "", mocks.credentialStore)
 	c.Assert(err, qt.IsNil)
 
 	jobId, err := s.jobTracker.Run(ctx,
@@ -247,7 +247,7 @@ func (s *bootstrapManagerSuite) TestGetJobInfo_JobNotFound(c *qt.C) {
 	ctrl, mocks, _ := setupTest(c)
 	defer ctrl.Finish()
 
-	manager, err := bootstrap.NewBootstrapManager(s.db, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, mocks.credentialStore)
+	manager, err := bootstrap.NewBootstrapManager(s.db, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, "", mocks.credentialStore)
 	c.Assert(err, qt.IsNil)
 
 	_, err = manager.GetJobInfo(ctx, s.adminUser, jobId, 0)
@@ -260,7 +260,7 @@ func (s *bootstrapManagerSuite) TestWaitForJobCompletion_NilJobID(c *qt.C) {
 	ctrl, mocks, _ := setupTest(c)
 	defer ctrl.Finish()
 
-	manager, err := bootstrap.NewBootstrapManager(s.db, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, mocks.credentialStore)
+	manager, err := bootstrap.NewBootstrapManager(s.db, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, "", mocks.credentialStore)
 	c.Assert(err, qt.IsNil)
 
 	err = manager.WaitForJobCompletion(ctx, uuid.Nil, bootstrap.WaitConfig{})
@@ -273,7 +273,7 @@ func (s *bootstrapManagerSuite) TestWaitForJobCompletion_Success(c *qt.C) {
 	ctrl, mocks, _ := setupTest(c)
 	defer ctrl.Finish()
 
-	manager, err := bootstrap.NewBootstrapManager(s.db, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, mocks.credentialStore)
+	manager, err := bootstrap.NewBootstrapManager(s.db, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, "", mocks.credentialStore)
 	c.Assert(err, qt.IsNil)
 
 	jobId, err := s.jobTracker.Run(ctx,
@@ -295,7 +295,7 @@ func (s *bootstrapManagerSuite) TestWaitForJobCompletion_JobFails(c *qt.C) {
 	ctrl, mocks, _ := setupTest(c)
 	defer ctrl.Finish()
 
-	manager, err := bootstrap.NewBootstrapManager(s.db, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, mocks.credentialStore)
+	manager, err := bootstrap.NewBootstrapManager(s.db, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, "", mocks.credentialStore)
 	c.Assert(err, qt.IsNil)
 
 	jobId, err := s.jobTracker.Run(ctx,
@@ -317,7 +317,7 @@ func (s *bootstrapManagerSuite) TestWaitForJobCompletion_JobNotFound(c *qt.C) {
 	ctrl, mocks, _ := setupTest(c)
 	defer ctrl.Finish()
 
-	manager, err := bootstrap.NewBootstrapManager(s.db, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, mocks.credentialStore)
+	manager, err := bootstrap.NewBootstrapManager(s.db, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, "", mocks.credentialStore)
 	c.Assert(err, qt.IsNil)
 
 	jobId := uuid.New()
@@ -332,7 +332,7 @@ func (s *bootstrapManagerSuite) TestWaitForJobCompletion_Timeout(c *qt.C) {
 	ctrl, mocks, _ := setupTest(c)
 	defer ctrl.Finish()
 
-	manager, err := bootstrap.NewBootstrapManager(s.db, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, mocks.credentialStore)
+	manager, err := bootstrap.NewBootstrapManager(s.db, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, "", mocks.credentialStore)
 	c.Assert(err, qt.IsNil)
 
 	// Create a job that will keep running (never completes)
@@ -372,7 +372,7 @@ func (s *bootstrapManagerSuite) TestBootstrapJob(c *qt.C) {
 	ctrl, mocks, user := setupTest(c)
 	defer ctrl.Finish()
 
-	manager, err := bootstrap.NewBootstrapManager(mocks.store, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, mocks.credentialStore)
+	manager, err := bootstrap.NewBootstrapManager(mocks.store, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, "", mocks.credentialStore)
 	c.Assert(err, qt.IsNil)
 
 	// Mocked in order of execution:
@@ -488,7 +488,7 @@ func (s *bootstrapManagerSuite) TestBootstrapJob_FailsToLock(c *qt.C) {
 	ctrl, mocks, user := setupTest(c)
 	defer ctrl.Finish()
 
-	manager, err := bootstrap.NewBootstrapManager(mocks.store, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, mocks.credentialStore)
+	manager, err := bootstrap.NewBootstrapManager(mocks.store, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, "", mocks.credentialStore)
 	c.Assert(err, qt.IsNil)
 
 	// Mocked in order of execution:
@@ -518,7 +518,7 @@ func (s *bootstrapManagerSuite) TestBootstrapJob_ControllerExists(c *qt.C) {
 	ctrl, mocks, user := setupTest(c)
 	defer ctrl.Finish()
 
-	manager, err := bootstrap.NewBootstrapManager(mocks.store, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, mocks.credentialStore)
+	manager, err := bootstrap.NewBootstrapManager(mocks.store, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, "", mocks.credentialStore)
 	c.Assert(err, qt.IsNil)
 
 	// Mocked in order of execution:
@@ -553,7 +553,7 @@ func (s *bootstrapManagerSuite) TestBootstrapJob_ControllerRetrievalFails(c *qt.
 	ctrl, mocks, user := setupTest(c)
 	defer ctrl.Finish()
 
-	manager, err := bootstrap.NewBootstrapManager(mocks.store, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, mocks.credentialStore)
+	manager, err := bootstrap.NewBootstrapManager(mocks.store, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, "", mocks.credentialStore)
 	c.Assert(err, qt.IsNil)
 
 	// Mocked in order of execution:
@@ -588,7 +588,7 @@ func (s *bootstrapManagerSuite) TestBootstrapJob_BinaryStoreGetFails(c *qt.C) {
 	ctrl, mocks, user := setupTest(c)
 	defer ctrl.Finish()
 
-	manager, err := bootstrap.NewBootstrapManager(mocks.store, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, mocks.credentialStore)
+	manager, err := bootstrap.NewBootstrapManager(mocks.store, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, "", mocks.credentialStore)
 	c.Assert(err, qt.IsNil)
 
 	// Mocked in order of execution:
@@ -640,7 +640,7 @@ func (s *bootstrapManagerSuite) TestBootstrapJob_ExecutorFails(c *qt.C) {
 	ctrl, mocks, user := setupTest(c)
 	defer ctrl.Finish()
 
-	manager, err := bootstrap.NewBootstrapManager(mocks.store, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, mocks.credentialStore)
+	manager, err := bootstrap.NewBootstrapManager(mocks.store, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, "", mocks.credentialStore)
 	c.Assert(err, qt.IsNil)
 
 	// Mocked in order of execution:
@@ -713,7 +713,7 @@ func (s *bootstrapManagerSuite) TestBootstrapJob_ReturnsEarlyIfLineErrors(c *qt.
 	ctrl, mocks, user := setupTest(c)
 	defer ctrl.Finish()
 
-	manager, err := bootstrap.NewBootstrapManager(mocks.store, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, mocks.credentialStore)
+	manager, err := bootstrap.NewBootstrapManager(mocks.store, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, "", mocks.credentialStore)
 	c.Assert(err, qt.IsNil)
 
 	// Mocked in order of execution:
@@ -793,7 +793,7 @@ func (s *bootstrapManagerSuite) TestBootstrapJob_ClientStoreFailsToGetController
 	ctrl, mocks, user := setupTest(c)
 	defer ctrl.Finish()
 
-	manager, err := bootstrap.NewBootstrapManager(mocks.store, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, mocks.credentialStore)
+	manager, err := bootstrap.NewBootstrapManager(mocks.store, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, "", mocks.credentialStore)
 	c.Assert(err, qt.IsNil)
 
 	// Mocked in order of execution:
@@ -911,7 +911,7 @@ func (s *bootstrapManagerSuite) TestBootstrapJob_ClientStoreFailsToGetAccountDet
 	ctrl, mocks, user := setupTest(c)
 	defer ctrl.Finish()
 
-	manager, err := bootstrap.NewBootstrapManager(mocks.store, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, mocks.credentialStore)
+	manager, err := bootstrap.NewBootstrapManager(mocks.store, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, "", mocks.credentialStore)
 	c.Assert(err, qt.IsNil)
 
 	// Mocked in order of execution:
@@ -1029,7 +1029,7 @@ func (s *bootstrapManagerSuite) TestBootstrapJob_JujuManagerFailsToAddController
 	ctrl, mocks, user := setupTest(c)
 	defer ctrl.Finish()
 
-	manager, err := bootstrap.NewBootstrapManager(mocks.store, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, mocks.credentialStore)
+	manager, err := bootstrap.NewBootstrapManager(mocks.store, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, "", mocks.credentialStore)
 	c.Assert(err, qt.IsNil)
 
 	// Mocked in order of execution:
@@ -1167,7 +1167,7 @@ func (s *bootstrapManagerSuite) TestBootstrapJob_CleanupControllerFailure(c *qt.
 	ctrl, mocks, user := setupTest(c)
 	defer ctrl.Finish()
 
-	manager, err := bootstrap.NewBootstrapManager(mocks.store, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, mocks.credentialStore)
+	manager, err := bootstrap.NewBootstrapManager(mocks.store, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, "", mocks.credentialStore)
 	c.Assert(err, qt.IsNil)
 
 	// Mocked in order of execution:
@@ -1301,7 +1301,7 @@ func (s *bootstrapManagerSuite) TestBootstrapJob_CancelledJob(c *qt.C) {
 	c.Assert(err, qt.IsNil)
 	s.jobTracker = tracker
 
-	manager, err := bootstrap.NewBootstrapManager(mocks.store, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, mocks.credentialStore)
+	manager, err := bootstrap.NewBootstrapManager(mocks.store, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, "", mocks.credentialStore)
 	c.Assert(err, qt.IsNil)
 
 	// Mocked in order of execution:
@@ -1420,7 +1420,7 @@ func (s *bootstrapManagerSuite) TestDestroyControllerJob(c *qt.C) {
 	ctrl, mocks, user := setupTest(c)
 	defer ctrl.Finish()
 
-	manager, err := bootstrap.NewBootstrapManager(mocks.store, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, mocks.credentialStore)
+	manager, err := bootstrap.NewBootstrapManager(mocks.store, s.jobTracker, mocks.jujuManager, mocks.binaryStore, loginTokenRefreshURLParam, "", mocks.credentialStore)
 	c.Assert(err, qt.IsNil)
 
 	mocks.store.EXPECT().LockBootstrap(gomock.Any(), gomock.Any()).Return(nil)

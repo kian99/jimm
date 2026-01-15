@@ -100,6 +100,7 @@ type bootstrapManager struct {
 	jujuManager               JujuManager
 	binaryStore               BinaryStore
 	jimmWellknownJWKSEndpoint string
+	jimmWellknownJWKSCACert   string
 	credentialStore           CredentialStore
 }
 
@@ -110,6 +111,7 @@ func NewBootstrapManager(
 	jujuManager JujuManager,
 	binaryStore BinaryStore,
 	jimmWellknownJWKSEndpoint string,
+	jimmWellknownJWKSCACert string,
 	credentialStore CredentialStore,
 ) (*bootstrapManager, error) {
 	if store == nil {
@@ -140,6 +142,7 @@ func NewBootstrapManager(
 		jujuManager:               jujuManager,
 		binaryStore:               binaryStore,
 		jimmWellknownJWKSEndpoint: jimmWellknownJWKSEndpoint,
+		jimmWellknownJWKSCACert:   jimmWellknownJWKSCACert,
 		credentialStore:           credentialStore,
 	}, nil
 }
@@ -263,7 +266,8 @@ func (b *bootstrapManager) StartBootstrapJob(ctx context.Context, user *openfga.
 				CloudCred:          params.CloudCred,
 				PersonalCloud:      params.PersonalCloud,
 				// JIMM Provided command arguments (i.e., ones that must be set by JIMM when bootstrapping).
-				LoginTokenRefreshURL: b.jimmWellknownJWKSEndpoint,
+				LoginTokenRefreshURL:      b.jimmWellknownJWKSEndpoint,
+				BootstrapTrustedCACertPEM: b.jimmWellknownJWKSCACert,
 				// User defined config
 				UserConfig: params.UserConfig,
 			},
@@ -347,6 +351,10 @@ type JobParams struct {
 	// JIMM Provided command arguments (i.e., ones that must be set by JIMM when bootstrapping).
 
 	LoginTokenRefreshURL string
+	// BootstrapTrustedCACertPEM is an optional CA certificate bundle (PEM)
+	// that will be installed onto the bootstrapped machine's trust store via
+	// cloud-init.
+	BootstrapTrustedCACertPEM string
 
 	// User provided config
 	UserConfig map[string]string
@@ -453,13 +461,14 @@ func (b *bootstrapManager) runBootstrap(
 	outputCh, clientStore, cleanup, err := executor.Bootstrap(
 		jobCtx,
 		jujucommands.BootstrapCmdParams{
-			CloudNameAndRegion:   p.CloudNameAndRegion,
-			ControllerName:       p.ControllerName,
-			AgentVersion:         p.AgentVersion,
-			LoginTokenRefreshURL: p.LoginTokenRefreshURL,
-			PersonalCloud:        p.PersonalCloud,
-			CloudCred:            p.CloudCred,
-			UserConfig:           p.UserConfig,
+			CloudNameAndRegion:        p.CloudNameAndRegion,
+			ControllerName:            p.ControllerName,
+			AgentVersion:              p.AgentVersion,
+			LoginTokenRefreshURL:      p.LoginTokenRefreshURL,
+			BootstrapTrustedCACertPEM: p.BootstrapTrustedCACertPEM,
+			PersonalCloud:             p.PersonalCloud,
+			CloudCred:                 p.CloudCred,
+			UserConfig:                p.UserConfig,
 		},
 	)
 	if err != nil {

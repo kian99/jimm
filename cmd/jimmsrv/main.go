@@ -235,6 +235,17 @@ func start(ctx context.Context, s *service.Service) error {
 		},
 		CrossModelQueryTimeout:        crossModelQueryTimeout,
 		BootstrapLoginTokenRefreshURL: os.Getenv("JIMM_BOOTSTRAP_LOGIN_TOKEN_REFRESH_URL"),
+		BootstrapTrustedCACertPEM: func() string {
+			if path := os.Getenv("JIMM_BOOTSTRAP_TRUSTED_CA_CERT_FILE"); path != "" {
+				b, err := os.ReadFile(path)
+				if err != nil {
+					zapctx.Error(ctx, "failed to read bootstrap trusted CA cert file", zap.Error(err))
+					return ""
+				}
+				return string(b)
+			}
+			return os.Getenv("JIMM_BOOTSTRAP_TRUSTED_CA_CERT")
+		}(),
 	})
 	if err != nil {
 		return err

@@ -4,9 +4,12 @@ package jujucommands
 
 import (
 	"context"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"slices"
 	"strings"
@@ -20,6 +23,8 @@ import (
 const (
 	//nolint:gosec // Thinks hardcoded credentials.
 	loginTokenRefreshURLKey = "login-token-refresh-url"
+	cloudInitUserDataKey    = "cloudinit-userdata"
+	bootstrapCloudInitFile  = "bootstrap-cloudinit.yaml"
 )
 
 // BootstrapCmdParams holds the parameters to bootstrap a controller for JIMM.
@@ -29,6 +34,11 @@ type BootstrapCmdParams struct {
 	ControllerName       string
 	AgentVersion         string
 	LoginTokenRefreshURL string
+	// BootstrapTrustedCACertPEM is an optional CA cert PEM bundle that will be
+	// installed into the bootstrapped machine's trusted certificate pool via
+	// cloud-init. This is primarily used when JIMM is running with a self-signed
+	// certificate.
+	BootstrapTrustedCACertPEM string
 
 	// Additional args required (like adding credential, cloud, etc.) but JIMM will handle.
 
@@ -63,11 +73,64 @@ func (b BootstrapCmdParams) Validate() error {
 		return fmt.Errorf("%q is a reserved config key and cannot be set in user config", loginTokenRefreshURLKey)
 	}
 
+	if b.BootstrapTrustedCACertPEM != "" {
+		if _, ok := b.UserConfig[cloudInitUserDataKey]; ok {
+			return fmt.Errorf("%q is a reserved config key when a bootstrap trusted CA cert is set", cloudInitUserDataKey)
+		}
+		if err := validateTrustedCACertPEM(b.BootstrapTrustedCACertPEM); err != nil {
+			return fmt.Errorf("invalid bootstrap trusted CA cert PEM: %w", err)
+		}
+	}
+
 	if b.LoginTokenRefreshURL == "" {
 		return errors.New("missing login token refresh URL, this value should be automatically set by JIMM")
 	}
 
 	return nil
+}
+
+func validateTrustedCACertPEM(pemData string) error {
+	data := []byte(pemData)
+	for {
+		block, rest := pem.Decode(data)
+		if block == nil {
+			break
+		}
+		data = rest
+		if block.Type != "CERTIFICATE" {
+			continue
+		}
+		if _, err := x509.ParseCertificate(block.Bytes); err != nil {
+			return err
+		}
+		return nil
+	}
+	return errors.New("no valid CERTIFICATE blocks found")
+}
+
+func buildBootstrapCloudInitConfig(p BootstrapCmdParams) (string, error) {
+	if p.BootstrapTrustedCACertPEM == "" {
+		return "", nil
+	}
+	// YAML indentation levels:
+	// cloudinit-userdata: |
+	//   ca-certs:
+	//     trusted:
+	//       - |
+	//         <pem>
+	cert := strings.TrimRight(p.BootstrapTrustedCACertPEM, "\n")
+	certLines := strings.Split(cert, "\n")
+	for i, line := range certLines {
+		certLines[i] = "        " + line
+	}
+	return strings.Join([]string{
+		"cloudinit-userdata: |",
+		"  ca-certs:",
+		"    trusted:",
+		"      - |",
+		strings.Join(certLines, "\n"),
+		"",
+	}, "\n"), nil
 }
 
 // BuildBootstrapCmdArgs builds the command arguments for the bootstrap command.
@@ -172,8 +235,24 @@ func (c *bootstrapCmd) Run(ctx context.Context, p BootstrapCmdParams) (<-chan Ou
 		return nil, nil, nil, fmt.Errorf("failed to set credential: %w", err)
 	}
 
+	cloudInitConfigPath := ""
+	if p.BootstrapTrustedCACertPEM != "" {
+		cfg, err := buildBootstrapCloudInitConfig(p)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		cloudInitConfigPath = filepath.Join(dataDir, bootstrapCloudInitFile)
+		if err := os.WriteFile(cloudInitConfigPath, []byte(cfg), 0o600); err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to write bootstrap cloud-init config: %w", err)
+		}
+	}
+
 	// With the clouds set, credentials updated, we now bootstrap.
 	args := p.BuildBootstrapCmdArgs()
+	if cloudInitConfigPath != "" {
+		// Insert the config file early. Juju merges multiple --config options.
+		args = slices.Insert(args, 1, "--config", cloudInitConfigPath)
+	}
 
 	cleanupTmpJujuData := func() {
 		os.RemoveAll(dataDir)

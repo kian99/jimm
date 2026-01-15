@@ -380,6 +380,10 @@ type Parameters struct {
 	// It should look something like:
 	// <scheme><ip/dns>[<port>]/.well-known/jwks.json"
 	BootstrapLoginTokenRefreshURL string
+	// BootstrapTrustedCACertPEM is an optional CA certificate bundle (PEM) used
+	// during bootstrap to install a custom CA into the controller machine's trust
+	// store via cloud-init. This is primarily for self-signed TLS deployments.
+	BootstrapTrustedCACertPEM string
 }
 
 func (p *Parameters) Validate() error {
@@ -544,6 +548,7 @@ func New(p Parameters) (*JIMM, error) {
 		j.jujuManager,
 		binaryStore,
 		p.BootstrapLoginTokenRefreshURL,
+		p.BootstrapTrustedCACertPEM,
 		j.CredentialStore,
 	)
 	if err != nil {
