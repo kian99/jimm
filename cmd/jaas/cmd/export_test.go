@@ -77,16 +77,14 @@ func NewAddCloudToControllerCommandForTesting(store jujuclient.ClientStore, lp j
 	return modelcmd.WrapBase(cmd)
 }
 
-type RemoveCloudFromControllerAPI = removeCloudFromControllerAPI
-
-func NewRemoveCloudFromControllerCommandForTesting(store jujuclient.ClientStore, lp jujuapi.LoginProvider, removeCloudFromControllerAPIFunc func() (RemoveCloudFromControllerAPI, error)) cmd.Command {
+func NewRemoveCloudFromControllerCommandForTesting(store jujuclient.ClientStore, lp jujuapi.LoginProvider, removeCloudFromControllerAPIFunc func() (JIMMAPI, error)) cmd.Command {
 	cmd := &removeCloudFromControllerCommand{
 		store:                            store,
 		dialOpts:                         cmdtest.TestDialOpts(lp),
 		removeCloudFromControllerAPIFunc: removeCloudFromControllerAPIFunc,
 	}
 	if removeCloudFromControllerAPIFunc == nil {
-		cmd.removeCloudFromControllerAPIFunc = cmd.cloudAPI
+		cmd.removeCloudFromControllerAPIFunc = cmd.newClient
 	}
 
 	return modelcmd.WrapBase(cmd)

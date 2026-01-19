@@ -31,6 +31,7 @@ func NewRevokeAuditLogAccessCommand() cmd.Command {
 	cmd := &revokeAuditLogAccessCommand{
 		store: jujuclient.NewFileClientStore(),
 	}
+	cmd.revokeAuditLogAccessAPIFunc = cmd.newClient
 
 	return modelcmd.WrapBase(cmd)
 }
@@ -40,9 +41,10 @@ func NewRevokeAuditLogAccessCommand() cmd.Command {
 type revokeAuditLogAccessCommand struct {
 	modelcmd.ControllerCommandBase
 
-	store    jujuclient.ClientStore
-	dialOpts *jujuapi.DialOpts
-	username string
+	revokeAuditLogAccessAPIFunc func() (JIMMAPI, error)
+	store                       jujuclient.ClientStore
+	dialOpts                    *jujuapi.DialOpts
+	username                    string
 }
 
 func (c *revokeAuditLogAccessCommand) Info() *cmd.Info {
@@ -74,18 +76,14 @@ func (c *revokeAuditLogAccessCommand) Init(args []string) error {
 
 // Run implements Command.Run.
 func (c *revokeAuditLogAccessCommand) Run(ctxt *cmd.Context) error {
-	currentController, err := c.store.CurrentController()
-	if err != nil {
-		return errors.E(err, "could not determine controller")
-	}
-
 	userTag := names.NewUserTag(c.username)
-	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
-	if err != nil {
-		return err
-	}
 
-	client := api.NewClient(apiCaller)
+	client, err := c.revokeAuditLogAccessAPIFunc()
+	if err != nil {
+		return errors.E(err, "could not create JIMM client")
+	}
+	defer client.Close()
+
 	err = client.RevokeAuditLogAccess(&apiparams.AuditLogAccessRequest{
 		UserTag: userTag.String(),
 	})
@@ -94,4 +92,18 @@ func (c *revokeAuditLogAccessCommand) Run(ctxt *cmd.Context) error {
 	}
 
 	return nil
+}
+
+func (c *revokeAuditLogAccessCommand) newClient() (JIMMAPI, error) {
+	currentController, err := c.store.CurrentController()
+	if err != nil {
+		return nil, errors.E(err, "could not determine controller")
+	}
+
+	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	return api.NewClient(apiCaller), nil
 }

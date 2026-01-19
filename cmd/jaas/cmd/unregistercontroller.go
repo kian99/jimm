@@ -31,6 +31,7 @@ func NewUnregisterControllerCommand() cmd.Command {
 	cmd := &unregisterControllerCommand{
 		store: jujuclient.NewFileClientStore(),
 	}
+	cmd.unregisterControllerAPIFunc = cmd.newClient
 
 	return modelcmd.WrapBase(cmd)
 }
@@ -40,9 +41,10 @@ type unregisterControllerCommand struct {
 	modelcmd.ControllerCommandBase
 	out cmd.Output
 
-	store    jujuclient.ClientStore
-	dialOpts *jujuapi.DialOpts
-	params   apiparams.RemoveControllerRequest
+	unregisterControllerAPIFunc func() (JIMMAPI, error)
+	store                       jujuclient.ClientStore
+	dialOpts                    *jujuapi.DialOpts
+	params                      apiparams.RemoveControllerRequest
 }
 
 func (c *unregisterControllerCommand) Info() *cmd.Info {
@@ -79,16 +81,12 @@ func (c *unregisterControllerCommand) Init(args []string) error {
 
 // Run implements Command.Run.
 func (c *unregisterControllerCommand) Run(ctxt *cmd.Context) error {
-	currentController, err := c.store.CurrentController()
+	client, err := c.unregisterControllerAPIFunc()
 	if err != nil {
-		return errors.E(err, "could not determine controller")
+		return errors.E(err, "could not create JIMM client")
 	}
+	defer client.Close()
 
-	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
-	if err != nil {
-		return err
-	}
-	client := api.NewClient(apiCaller)
 	info, err := client.RemoveController(&c.params)
 	if err != nil {
 		return errors.E(err)
@@ -99,4 +97,18 @@ func (c *unregisterControllerCommand) Run(ctxt *cmd.Context) error {
 		return errors.E(err)
 	}
 	return nil
+}
+
+func (c *unregisterControllerCommand) newClient() (JIMMAPI, error) {
+	currentController, err := c.store.CurrentController()
+	if err != nil {
+		return nil, errors.E(err, "could not determine controller")
+	}
+
+	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	return api.NewClient(apiCaller), nil
 }

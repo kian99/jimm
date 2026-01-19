@@ -55,6 +55,7 @@ func NewRegisterControllerCommand() cmd.Command {
 	cmd := &registerControllerCommand{
 		store: jujuclient.NewFileClientStore(),
 	}
+	cmd.registerControllerAPIFunc = cmd.newClient
 
 	return modelcmd.WrapBase(cmd)
 }
@@ -64,14 +65,15 @@ type registerControllerCommand struct {
 	modelcmd.ControllerCommandBase
 	out cmd.Output
 
-	store          jujuclient.ClientStore
-	dialOpts       *jujuapi.DialOpts
-	file           cmd.FileVar
-	local          bool
-	tlsHostname    string
-	controllerName string
-	publicAddress  string
-	dryRun         bool
+	registerControllerAPIFunc func() (JIMMAPI, error)
+	store                     jujuclient.ClientStore
+	dialOpts                  *jujuapi.DialOpts
+	file                      cmd.FileVar
+	local                     bool
+	tlsHostname               string
+	controllerName            string
+	publicAddress             string
+	dryRun                    bool
 }
 
 func (c *registerControllerCommand) Info() *cmd.Info {
@@ -128,17 +130,12 @@ func (c *registerControllerCommand) Run(ctxt *cmd.Context) error {
 		return c.out.Write(ctxt, params)
 	}
 
-	currentController, err := c.store.CurrentController()
+	client, err := c.registerControllerAPIFunc()
 	if err != nil {
-		return errors.Annotate(err, "could not determine controller")
+		return errors.Annotate(err, "could not create JIMM client")
 	}
+	defer client.Close()
 
-	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
-	if err != nil {
-		return err
-	}
-
-	client := api.NewClient(apiCaller)
 	info, err := client.AddController(&params)
 	if err != nil {
 		return err
@@ -149,6 +146,20 @@ func (c *registerControllerCommand) Run(ctxt *cmd.Context) error {
 		return err
 	}
 	return nil
+}
+
+func (c *registerControllerCommand) newClient() (JIMMAPI, error) {
+	currentController, err := c.store.CurrentController()
+	if err != nil {
+		return nil, errors.Annotate(err, "could not determine controller")
+	}
+
+	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	return api.NewClient(apiCaller), nil
 }
 
 func unmarshalControllerDetails(v interface{}, data []byte) error {

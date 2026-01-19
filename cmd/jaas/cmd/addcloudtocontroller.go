@@ -45,6 +45,7 @@ func NewAddCloudToControllerCommand() cmd.Command {
 		store:           jujuclient.NewFileClientStore(),
 		cloudByNameFunc: jujucmdcommon.CloudByName,
 	}
+	cmd.addCloudToControllerAPIFunc = cmd.newClient
 
 	return modelcmd.WrapBase(cmd)
 }
@@ -68,9 +69,10 @@ type addCloudToControllerCommand struct {
 	// compatible with the cloud on which the controller is running.
 	force bool
 
-	cloudByNameFunc func(string) (*cloud.Cloud, error)
-	store           jujuclient.ClientStore
-	dialOpts        *jujuapi.DialOpts
+	addCloudToControllerAPIFunc func() (JIMMAPI, error)
+	cloudByNameFunc             func(string) (*cloud.Cloud, error)
+	store                       jujuclient.ClientStore
+	dialOpts                    *jujuapi.DialOpts
 }
 
 // Info implements Command.Info.
@@ -148,15 +150,11 @@ func (c *addCloudToControllerCommand) Run(ctxt *cmd.Context) error {
 }
 
 func (c *addCloudToControllerCommand) addCloudToController(ctxt *cmd.Context, cloud *cloud.Cloud) error {
-	currentController, err := c.store.CurrentController()
+	client, err := c.addCloudToControllerAPIFunc()
 	if err != nil {
-		return errors.E(err, "could not determine the current controller")
+		return errors.E(err, "could not create JIMM client")
 	}
-	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
-	if err != nil {
-		return err
-	}
-	client := api.NewClient(apiCaller)
+	defer client.Close()
 
 	params := &apiparams.AddCloudToControllerRequest{
 		ControllerName: c.dstControllerName,
@@ -174,6 +172,20 @@ func (c *addCloudToControllerCommand) addCloudToController(ctxt *cmd.Context, cl
 
 	ctxt.Infof("Cloud %q added to controller %q.", c.cloudName, c.dstControllerName)
 	return nil
+}
+
+func (c *addCloudToControllerCommand) newClient() (JIMMAPI, error) {
+	currentController, err := c.store.CurrentController()
+	if err != nil {
+		return nil, errors.E(err, "could not determine the current controller")
+	}
+
+	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	return api.NewClient(apiCaller), nil
 }
 
 func (c *addCloudToControllerCommand) readCloudFromFile(ctxt *cmd.Context) (*cloud.Cloud, error) {

@@ -35,15 +35,19 @@ func NewPurgeLogsCommand() cmd.Command {
 	cmd := &purgeLogsCommand{
 		store: jujuclient.NewFileClientStore(),
 	}
+	cmd.purgeLogsAPIFunc = cmd.newClient
+
 	return modelcmd.WrapBase(cmd)
 }
 
 // purgeLogsCommand purges logs.
 type purgeLogsCommand struct {
 	modelcmd.ControllerCommandBase
-	store    jujuclient.ClientStore
-	dialOpts *jujuapi.DialOpts
-	out      cmd.Output
+	out cmd.Output
+
+	purgeLogsAPIFunc func() (JIMMAPI, error)
+	store            jujuclient.ClientStore
+	dialOpts         *jujuapi.DialOpts
 
 	date time.Time
 }
@@ -86,17 +90,12 @@ func (c *purgeLogsCommand) SetFlags(f *gnuflag.FlagSet) {
 // Run implements Command.Run. It purges logs from the database before the given
 // date.
 func (c *purgeLogsCommand) Run(ctx *cmd.Context) error {
-	currentController, err := c.store.CurrentController()
+	client, err := c.purgeLogsAPIFunc()
 	if err != nil {
-		return errors.E(err, "could not determine controller")
+		return errors.E(err, "could not create JIMM client")
 	}
+	defer client.Close()
 
-	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
-	if err != nil {
-		return err
-	}
-
-	client := api.NewClient(apiCaller)
 	response, err := client.PurgeLogs(&apiparams.PurgeLogsRequest{
 		Date: c.date,
 	})
@@ -108,6 +107,20 @@ func (c *purgeLogsCommand) Run(ctx *cmd.Context) error {
 		return errors.E(err)
 	}
 	return nil
+}
+
+func (c *purgeLogsCommand) newClient() (JIMMAPI, error) {
+	currentController, err := c.store.CurrentController()
+	if err != nil {
+		return nil, errors.E(err, "could not determine controller")
+	}
+
+	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	return api.NewClient(apiCaller), nil
 }
 
 // parseDate validates the date string is in ISO8601 format. If it is, it

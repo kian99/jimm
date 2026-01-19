@@ -32,6 +32,7 @@ func NewGrantAuditLogAccessCommand() cmd.Command {
 	cmd := &grantAuditLogAccessCommand{
 		store: jujuclient.NewFileClientStore(),
 	}
+	cmd.grantAuditLogAccessAPIFunc = cmd.newClient
 
 	return modelcmd.WrapBase(cmd)
 }
@@ -41,9 +42,10 @@ func NewGrantAuditLogAccessCommand() cmd.Command {
 type grantAuditLogAccessCommand struct {
 	modelcmd.ControllerCommandBase
 
-	store    jujuclient.ClientStore
-	dialOpts *jujuapi.DialOpts
-	username string
+	grantAuditLogAccessAPIFunc func() (JIMMAPI, error)
+	store                      jujuclient.ClientStore
+	dialOpts                   *jujuapi.DialOpts
+	username                   string
 }
 
 func (c *grantAuditLogAccessCommand) Info() *cmd.Info {
@@ -75,18 +77,14 @@ func (c *grantAuditLogAccessCommand) Init(args []string) error {
 
 // Run implements Command.Run.
 func (c *grantAuditLogAccessCommand) Run(ctxt *cmd.Context) error {
-	currentController, err := c.store.CurrentController()
-	if err != nil {
-		return errors.E(err, "could not determine controller")
-	}
-
 	userTag := names.NewUserTag(c.username)
-	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
-	if err != nil {
-		return err
-	}
 
-	client := api.NewClient(apiCaller)
+	client, err := c.grantAuditLogAccessAPIFunc()
+	if err != nil {
+		return errors.E(err, "could not create JIMM client")
+	}
+	defer client.Close()
+
 	err = client.GrantAuditLogAccess(&apiparams.AuditLogAccessRequest{
 		UserTag: userTag.String(),
 	})
@@ -95,4 +93,18 @@ func (c *grantAuditLogAccessCommand) Run(ctxt *cmd.Context) error {
 	}
 
 	return nil
+}
+
+func (c *grantAuditLogAccessCommand) newClient() (JIMMAPI, error) {
+	currentController, err := c.store.CurrentController()
+	if err != nil {
+		return nil, errors.E(err, "could not determine controller")
+	}
+
+	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	return api.NewClient(apiCaller), nil
 }

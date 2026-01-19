@@ -37,6 +37,7 @@ func NewListAuditEventsCommand() cmd.Command {
 	cmd := &listAuditEventsCommand{
 		store: jujuclient.NewFileClientStore(),
 	}
+	cmd.listAuditEventsAPIFunc = cmd.newClient
 
 	return modelcmd.WrapBase(cmd)
 }
@@ -47,9 +48,10 @@ type listAuditEventsCommand struct {
 	modelcmd.ControllerCommandBase
 	out cmd.Output
 
-	store    jujuclient.ClientStore
-	dialOpts *jujuapi.DialOpts
-	args     apiparams.FindAuditEventsRequest
+	listAuditEventsAPIFunc func() (JIMMAPI, error)
+	store                  jujuclient.ClientStore
+	dialOpts               *jujuapi.DialOpts
+	args                   apiparams.FindAuditEventsRequest
 }
 
 func (c *listAuditEventsCommand) Info() *cmd.Info {
@@ -91,17 +93,12 @@ func (c *listAuditEventsCommand) Init(args []string) error {
 
 // Run implements Command.Run.
 func (c *listAuditEventsCommand) Run(ctxt *cmd.Context) error {
-	currentController, err := c.store.CurrentController()
+	client, err := c.listAuditEventsAPIFunc()
 	if err != nil {
-		return errors.E(err, "could not determine controller")
+		return errors.E(err, "could not create JIMM client")
 	}
+	defer client.Close()
 
-	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
-	if err != nil {
-		return err
-	}
-
-	client := api.NewClient(apiCaller)
 	events, err := client.FindAuditEvents(&c.args)
 	if err != nil {
 		return errors.E(err)
@@ -112,6 +109,20 @@ func (c *listAuditEventsCommand) Run(ctxt *cmd.Context) error {
 		return errors.E(err)
 	}
 	return nil
+}
+
+func (c *listAuditEventsCommand) newClient() (JIMMAPI, error) {
+	currentController, err := c.store.CurrentController()
+	if err != nil {
+		return nil, errors.E(err, "could not determine controller")
+	}
+
+	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	return api.NewClient(apiCaller), nil
 }
 
 func formatTabular(writer io.Writer, value interface{}) error {

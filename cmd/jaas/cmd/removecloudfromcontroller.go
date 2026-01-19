@@ -34,7 +34,7 @@ func NewRemoveCloudFromControllerCommand() cmd.Command {
 	cmd := &removeCloudFromControllerCommand{
 		store: jujuclient.NewFileClientStore(),
 	}
-	cmd.removeCloudFromControllerAPIFunc = cmd.cloudAPI
+	cmd.removeCloudFromControllerAPIFunc = cmd.newClient
 
 	return modelcmd.WrapBase(cmd)
 }
@@ -51,13 +51,9 @@ type removeCloudFromControllerCommand struct {
 	// should be removed from.
 	targetControllerName string
 
-	removeCloudFromControllerAPIFunc func() (removeCloudFromControllerAPI, error)
+	removeCloudFromControllerAPIFunc func() (JIMMAPI, error)
 	store                            jujuclient.ClientStore
 	dialOpts                         *jujuapi.DialOpts
-}
-
-type removeCloudFromControllerAPI interface {
-	RemoveCloudFromController(params *apiparams.RemoveCloudFromControllerRequest) error
 }
 
 // Info implements Command.Info.
@@ -115,6 +111,7 @@ func (c *removeCloudFromControllerCommand) removeCloudFromController(ctxt *cmd.C
 	if err != nil {
 		return errors.E(err)
 	}
+	defer client.Close()
 
 	params := &apiparams.RemoveCloudFromControllerRequest{
 		CloudTag:       "cloud-" + c.cloudName,
@@ -130,11 +127,12 @@ func (c *removeCloudFromControllerCommand) removeCloudFromController(ctxt *cmd.C
 	return nil
 }
 
-func (c *removeCloudFromControllerCommand) cloudAPI() (removeCloudFromControllerAPI, error) {
+func (c *removeCloudFromControllerCommand) newClient() (JIMMAPI, error) {
 	currentController, err := c.store.CurrentController()
 	if err != nil {
 		return nil, errors.E(err, "could not determine the current controller")
 	}
+
 	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
 	if err != nil {
 		return nil, err

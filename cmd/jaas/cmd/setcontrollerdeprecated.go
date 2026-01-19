@@ -30,6 +30,7 @@ func NewSetControllerDeprecatedCommand() cmd.Command {
 	cmd := &setControllerDeprecatedCommand{
 		store: jujuclient.NewFileClientStore(),
 	}
+	cmd.setControllerDeprecatedAPIFunc = cmd.newClient
 
 	return modelcmd.WrapBase(cmd)
 }
@@ -40,8 +41,9 @@ type setControllerDeprecatedCommand struct {
 	modelcmd.ControllerCommandBase
 	out cmd.Output
 
-	store    jujuclient.ClientStore
-	dialOpts *jujuapi.DialOpts
+	setControllerDeprecatedAPIFunc func() (JIMMAPI, error)
+	store                          jujuclient.ClientStore
+	dialOpts                       *jujuapi.DialOpts
 
 	controllerName string
 }
@@ -79,17 +81,11 @@ func (c *setControllerDeprecatedCommand) Init(args []string) error {
 
 // Run implements Command.Run.
 func (c *setControllerDeprecatedCommand) Run(ctxt *cmd.Context) error {
-	currentController, err := c.store.CurrentController()
+	client, err := c.setControllerDeprecatedAPIFunc()
 	if err != nil {
-		return errors.E(err, "could not determine controller")
+		return errors.E(err, "could not create JIMM client")
 	}
-
-	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
-	if err != nil {
-		return err
-	}
-
-	client := api.NewClient(apiCaller)
+	defer client.Close()
 
 	info, err := client.SetControllerDeprecated(&apiparams.SetControllerDeprecatedRequest{
 		Name:       c.controllerName,
@@ -104,4 +100,18 @@ func (c *setControllerDeprecatedCommand) Run(ctxt *cmd.Context) error {
 		return errors.E(err)
 	}
 	return nil
+}
+
+func (c *setControllerDeprecatedCommand) newClient() (JIMMAPI, error) {
+	currentController, err := c.store.CurrentController()
+	if err != nil {
+		return nil, errors.E(err, "could not determine controller")
+	}
+
+	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	return api.NewClient(apiCaller), nil
 }
