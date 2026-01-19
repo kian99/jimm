@@ -2,7 +2,6 @@
 
 //go:build integration
 
-
 package cmd_test
 
 import (
