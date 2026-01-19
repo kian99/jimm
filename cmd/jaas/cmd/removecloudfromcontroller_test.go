@@ -46,7 +46,7 @@ func (s *removeCloudFromControllerSuite) TestRemoveCloudFromController(c *gc.C) 
 		}},
 	}, {
 		FuncName: "Close",
-		Args:     []interface{}{},
+		Args:     []interface{}{nil},
 	}})
 	c.Assert(cmdtesting.Stderr(ctx), gc.Equals, "Cloud \"test-cloud\" removed from controller \"controller-1\".\n")
 }
@@ -82,7 +82,7 @@ type fakeRemoveCloudFromControllerAPI struct {
 }
 
 func (api *fakeRemoveCloudFromControllerAPI) Close() error {
-	api.AddCall("Close")
+	api.AddCall("Close", nil)
 	return api.NextErr()
 }
 
