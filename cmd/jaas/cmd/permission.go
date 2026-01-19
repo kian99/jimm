@@ -591,7 +591,7 @@ func (c *listPermissionsCommand) Run(ctxt *cmd.Context) error {
 		PageSize:     defaultPageSize,
 		ResolveUUIDs: c.resolveUUIDs,
 	}
-	
+
 	result, err := fetchRelations(client, params)
 	if err != nil {
 		return errors.E(err)
