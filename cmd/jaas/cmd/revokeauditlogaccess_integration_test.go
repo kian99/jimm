@@ -1,5 +1,8 @@
 // Copyright 2025 Canonical.
 
+//go:build integration
+
+
 package cmd_test
 
 import (
