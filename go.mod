@@ -106,7 +106,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bmizerany/pat v0.0.0-20210406213842-e4b6760bdd6f // indirect
 	github.com/canonical/go-dqlite v1.21.0 // indirect
-	github.com/canonical/lxd v0.0.0-20251112203541-660577aa1183
+	github.com/canonical/lxd v0.0.0-20251112203541-660577aa1183 // indirect
 	github.com/cenkalti/backoff/v3 v3.2.2 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cjlapao/common-go v0.0.39 // indirect
@@ -187,7 +187,7 @@ require (
 	github.com/juju/mgo/v3 v3.0.5 // indirect
 	github.com/juju/mutex/v2 v2.0.0 // indirect
 	github.com/juju/os/v2 v2.2.5 // indirect
-	github.com/juju/persistent-cookiejar v1.0.0
+	github.com/juju/persistent-cookiejar v1.0.0 // indirect
 	github.com/juju/proxy v1.0.0 // indirect
 	github.com/juju/pubsub/v2 v2.0.0 // indirect
 	github.com/juju/ratelimit v1.0.2 // indirect
