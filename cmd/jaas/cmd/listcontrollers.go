@@ -29,6 +29,7 @@ func NewListControllersCommand() cmd.Command {
 	cmd := &listControllersCommand{
 		store: jujuclient.NewFileClientStore(),
 	}
+	cmd.listAPIFunc = cmd.newClient
 
 	return modelcmd.WrapBase(cmd)
 }
@@ -39,8 +40,9 @@ type listControllersCommand struct {
 	modelcmd.ControllerCommandBase
 	out cmd.Output
 
-	store    jujuclient.ClientStore
-	dialOpts *jujuapi.DialOpts
+	store       jujuclient.ClientStore
+	dialOpts    *jujuapi.DialOpts
+	listAPIFunc func() (JIMMAPI, error)
 }
 
 func (c *listControllersCommand) Info() *cmd.Info {
@@ -64,16 +66,12 @@ func (c *listControllersCommand) SetFlags(f *gnuflag.FlagSet) {
 
 // Run implements Command.Run.
 func (c *listControllersCommand) Run(ctxt *cmd.Context) error {
-	currentController, err := c.store.CurrentController()
+	client, err := c.listAPIFunc()
 	if err != nil {
-		return errors.E(err, "could not determine controller")
+		return errors.E("could not create JIMM client: %v", err)
 	}
-	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
-	if err != nil {
-		return err
-	}
+	defer client.Close()
 
-	client := api.NewClient(apiCaller)
 	controllers, err := client.ListControllers()
 	if err != nil {
 		return errors.E(err)
@@ -84,4 +82,18 @@ func (c *listControllersCommand) Run(ctxt *cmd.Context) error {
 		return errors.E(err)
 	}
 	return nil
+}
+
+func (c *listControllersCommand) newClient() (JIMMAPI, error) {
+	currentController, err := c.store.CurrentController()
+	if err != nil {
+		return nil, errors.E(err, "could not determine controller")
+	}
+
+	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	return api.NewClient(apiCaller), nil
 }

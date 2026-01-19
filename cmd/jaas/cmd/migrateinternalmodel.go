@@ -38,6 +38,7 @@ func NewMigrateInternalModelCommand() cmd.Command {
 	cmd := &migrateInternalModelCommand{
 		store: jujuclient.NewFileClientStore(),
 	}
+	cmd.migrateAPIFunc = cmd.newClient
 
 	return modelcmd.WrapBase(cmd)
 }
@@ -49,6 +50,7 @@ type migrateInternalModelCommand struct {
 
 	store            jujuclient.ClientStore
 	dialOpts         *jujuapi.DialOpts
+	migrateAPIFunc   func() (JIMMAPI, error)
 	targetController string
 	modelTargets     []string
 }
@@ -90,17 +92,12 @@ func (c *migrateInternalModelCommand) Init(args []string) error {
 
 // Run implements Command.Run.
 func (c *migrateInternalModelCommand) Run(ctxt *cmd.Context) error {
-	currentController, err := c.store.CurrentController()
+	client, err := c.migrateAPIFunc()
 	if err != nil {
-		return errors.E(err, "could not determine controller")
+		return errors.E("could not create JIMM client: %v", err)
 	}
+	defer client.Close()
 
-	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
-	if err != nil {
-		return err
-	}
-
-	client := api.NewClient(apiCaller)
 	specs := []apiparams.MigrateModelInfo{}
 	for _, model := range c.modelTargets {
 		specs = append(specs, apiparams.MigrateModelInfo{TargetModelNameOrUUID: model, TargetController: c.targetController})
@@ -116,4 +113,18 @@ func (c *migrateInternalModelCommand) Run(ctxt *cmd.Context) error {
 		return err
 	}
 	return nil
+}
+
+func (c *migrateInternalModelCommand) newClient() (JIMMAPI, error) {
+	currentController, err := c.store.CurrentController()
+	if err != nil {
+		return nil, errors.E(err, "could not determine controller")
+	}
+
+	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	return api.NewClient(apiCaller), nil
 }

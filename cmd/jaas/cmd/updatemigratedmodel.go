@@ -31,6 +31,7 @@ func NewUpdateMigratedModelCommand() cmd.Command {
 	cmd := &updateMigratedModelCommand{
 		store: jujuclient.NewFileClientStore(),
 	}
+	cmd.updateFunc = cmd.newClient
 
 	return modelcmd.WrapBase(cmd)
 }
@@ -38,8 +39,9 @@ func NewUpdateMigratedModelCommand() cmd.Command {
 // updateMigratedModelCommand updates the controller running a model.
 type updateMigratedModelCommand struct {
 	modelcmd.ControllerCommandBase
-	store    jujuclient.ClientStore
-	dialOpts *jujuapi.DialOpts
+	store      jujuclient.ClientStore
+	dialOpts   *jujuapi.DialOpts
+	updateFunc func() (JIMMAPI, error)
 
 	req apiparams.UpdateMigratedModelRequest
 }
@@ -77,19 +79,28 @@ func (c *updateMigratedModelCommand) Init(args []string) error {
 
 // Run implements Command.Run.
 func (c *updateMigratedModelCommand) Run(ctxt *cmd.Context) error {
-	currentController, err := c.store.CurrentController()
+	client, err := c.updateFunc()
 	if err != nil {
-		return errors.E(err, "could not determine controller")
+		return errors.E("could not create JIMM client: %v", err)
 	}
+	defer client.Close()
 
-	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
-	if err != nil {
-		return err
-	}
-
-	client := api.NewClient(apiCaller)
 	if err := client.UpdateMigratedModel(&c.req); err != nil {
 		return errors.E(err)
 	}
 	return nil
+}
+
+func (c *updateMigratedModelCommand) newClient() (JIMMAPI, error) {
+	currentController, err := c.store.CurrentController()
+	if err != nil {
+		return nil, errors.E(err, "could not determine controller")
+	}
+
+	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	return api.NewClient(apiCaller), nil
 }

@@ -31,6 +31,7 @@ func NewModelStatusCommand() cmd.Command {
 	cmd := &modelStatusCommand{
 		store: jujuclient.NewFileClientStore(),
 	}
+	cmd.statusFunc = cmd.newClient
 
 	return modelcmd.WrapBase(cmd)
 }
@@ -41,9 +42,10 @@ type modelStatusCommand struct {
 	modelcmd.ControllerCommandBase
 	out cmd.Output
 
-	store     jujuclient.ClientStore
-	dialOpts  *jujuapi.DialOpts
-	modelUUID string
+	store       jujuclient.ClientStore
+	dialOpts    *jujuapi.DialOpts
+	statusFunc  func() (JIMMAPI, error)
+	modelUUID   string
 }
 
 func (c *modelStatusCommand) Info() *cmd.Info {
@@ -79,18 +81,13 @@ func (c *modelStatusCommand) Init(args []string) error {
 
 // Run implements Command.Run.
 func (c *modelStatusCommand) Run(ctxt *cmd.Context) error {
-	currentController, err := c.store.CurrentController()
+	client, err := c.statusFunc()
 	if err != nil {
-		return errors.E(err, "could not determine controller")
+		return errors.E("could not create JIMM client: %v", err)
 	}
+	defer client.Close()
 
 	modelTag := names.NewModelTag(c.modelUUID)
-	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
-	if err != nil {
-		return err
-	}
-
-	client := api.NewClient(apiCaller)
 	status, err := client.FullModelStatus(&apiparams.FullModelStatusRequest{
 		ModelTag: modelTag.String(),
 	})
@@ -103,4 +100,18 @@ func (c *modelStatusCommand) Run(ctxt *cmd.Context) error {
 		return errors.E(err)
 	}
 	return nil
+}
+
+func (c *modelStatusCommand) newClient() (JIMMAPI, error) {
+	currentController, err := c.store.CurrentController()
+	if err != nil {
+		return nil, errors.E(err, "could not determine controller")
+	}
+
+	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	return api.NewClient(apiCaller), nil
 }

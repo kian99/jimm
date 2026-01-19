@@ -56,6 +56,7 @@ func NewAddRoleCommand() cmd.Command {
 	cmd := &addRoleCommand{
 		store: jujuclient.NewFileClientStore(),
 	}
+	cmd.addAPIFunc = cmd.newClient
 
 	return modelcmd.WrapBase(cmd)
 }
@@ -65,8 +66,9 @@ type addRoleCommand struct {
 	modelcmd.ControllerCommandBase
 	out cmd.Output
 
-	store    jujuclient.ClientStore
-	dialOpts *jujuapi.DialOpts
+	store      jujuclient.ClientStore
+	dialOpts   *jujuapi.DialOpts
+	addAPIFunc func() (JIMMAPI, error)
 
 	name string
 }
@@ -105,17 +107,12 @@ func (c *addRoleCommand) Init(args []string) error {
 
 // Run implements Command.Run.
 func (c *addRoleCommand) Run(ctxt *cmd.Context) error {
-	currentController, err := c.store.CurrentController()
+	client, err := c.addAPIFunc()
 	if err != nil {
-		return errors.E(err, "could not determine controller")
+		return errors.E("could not create JIMM client: %v", err)
 	}
+	defer client.Close()
 
-	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
-	if err != nil {
-		return err
-	}
-
-	client := api.NewClient(apiCaller)
 	resp, err := client.AddRole(&apiparams.AddRoleRequest{
 		Name: c.name,
 	})
@@ -130,11 +127,26 @@ func (c *addRoleCommand) Run(ctxt *cmd.Context) error {
 	return nil
 }
 
+func (c *addRoleCommand) newClient() (JIMMAPI, error) {
+	currentController, err := c.store.CurrentController()
+	if err != nil {
+		return nil, errors.E(err, "could not determine controller")
+	}
+
+	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	return api.NewClient(apiCaller), nil
+}
+
 // NewRenameRoleCommand returns a command to rename a role.
 func NewRenameRoleCommand() cmd.Command {
 	cmd := &renameRoleCommand{
 		store: jujuclient.NewFileClientStore(),
 	}
+	cmd.renameAPIFunc = cmd.newClient
 
 	return modelcmd.WrapBase(cmd)
 }
@@ -143,8 +155,9 @@ func NewRenameRoleCommand() cmd.Command {
 type renameRoleCommand struct {
 	modelcmd.ControllerCommandBase
 
-	store    jujuclient.ClientStore
-	dialOpts *jujuapi.DialOpts
+	store         jujuclient.ClientStore
+	dialOpts      *jujuapi.DialOpts
+	renameAPIFunc func() (JIMMAPI, error)
 
 	name    string
 	newName string
@@ -175,22 +188,17 @@ func (c *renameRoleCommand) Init(args []string) error {
 
 // Run implements Command.Run.
 func (c *renameRoleCommand) Run(ctxt *cmd.Context) error {
-	currentController, err := c.store.CurrentController()
+	client, err := c.renameAPIFunc()
 	if err != nil {
-		return errors.E(err, "could not determine controller")
+		return errors.E("could not create JIMM client: %v", err)
 	}
-
-	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
-	if err != nil {
-		return err
-	}
+	defer client.Close()
 
 	params := apiparams.RenameRoleRequest{
 		Name:    c.name,
 		NewName: c.newName,
 	}
 
-	client := api.NewClient(apiCaller)
 	err = client.RenameRole(&params)
 	if err != nil {
 		return errors.E(err)
@@ -199,11 +207,26 @@ func (c *renameRoleCommand) Run(ctxt *cmd.Context) error {
 	return nil
 }
 
+func (c *renameRoleCommand) newClient() (JIMMAPI, error) {
+	currentController, err := c.store.CurrentController()
+	if err != nil {
+		return nil, errors.E(err, "could not determine controller")
+	}
+
+	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	return api.NewClient(apiCaller), nil
+}
+
 // NewRemoveRoleCommand returns a command to Remove a role.
 func NewRemoveRoleCommand() cmd.Command {
 	cmd := &removeRoleCommand{
 		store: jujuclient.NewFileClientStore(),
 	}
+	cmd.removeAPIFunc = cmd.newClient
 
 	return modelcmd.WrapBase(cmd)
 }
@@ -213,8 +236,9 @@ type removeRoleCommand struct {
 	modelcmd.ControllerCommandBase
 	out cmd.Output
 
-	store    jujuclient.ClientStore
-	dialOpts *jujuapi.DialOpts
+	store         jujuclient.ClientStore
+	dialOpts      *jujuapi.DialOpts
+	removeAPIFunc func() (JIMMAPI, error)
 
 	name  string
 	force bool
@@ -254,11 +278,6 @@ func (c *removeRoleCommand) SetFlags(f *gnuflag.FlagSet) {
 
 // Run implements Command.Run.
 func (c *removeRoleCommand) Run(ctxt *cmd.Context) error {
-	currentController, err := c.store.CurrentController()
-	if err != nil {
-		return errors.E(err, "could not determine controller")
-	}
-
 	if !c.force {
 		reader := bufio.NewReader(ctxt.Stdin)
 		// Using Fprintf over c.out.write to avoid printing a new line.
@@ -276,16 +295,16 @@ func (c *removeRoleCommand) Run(ctxt *cmd.Context) error {
 		}
 	}
 
-	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
+	client, err := c.removeAPIFunc()
 	if err != nil {
-		return err
+		return errors.E("could not create JIMM client: %v", err)
 	}
+	defer client.Close()
 
 	params := apiparams.RemoveRoleRequest{
 		Name: c.name,
 	}
 
-	client := api.NewClient(apiCaller)
 	err = client.RemoveRole(&params)
 	if err != nil {
 		return errors.E(err)
@@ -294,11 +313,26 @@ func (c *removeRoleCommand) Run(ctxt *cmd.Context) error {
 	return nil
 }
 
+func (c *removeRoleCommand) newClient() (JIMMAPI, error) {
+	currentController, err := c.store.CurrentController()
+	if err != nil {
+		return nil, errors.E(err, "could not determine controller")
+	}
+
+	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	return api.NewClient(apiCaller), nil
+}
+
 // NewListRolesCommand returns a command to list all roles.
 func NewListRolesCommand() cmd.Command {
 	cmd := &listRolesCommand{
 		store: jujuclient.NewFileClientStore(),
 	}
+	cmd.listAPIFunc = cmd.newClient
 
 	return modelcmd.WrapBase(cmd)
 }
@@ -308,8 +342,9 @@ type listRolesCommand struct {
 	modelcmd.ControllerCommandBase
 	out cmd.Output
 
-	store    jujuclient.ClientStore
-	dialOpts *jujuapi.DialOpts
+	store       jujuclient.ClientStore
+	dialOpts    *jujuapi.DialOpts
+	listAPIFunc func() (JIMMAPI, error)
 
 	limit  int
 	offset int
@@ -347,17 +382,12 @@ func (c *listRolesCommand) SetFlags(f *gnuflag.FlagSet) {
 
 // Run implements Command.Run.
 func (c *listRolesCommand) Run(ctxt *cmd.Context) error {
-	currentController, err := c.store.CurrentController()
+	client, err := c.listAPIFunc()
 	if err != nil {
-		return errors.E(err, "could not determine controller")
+		return errors.E("could not create JIMM client: %v", err)
 	}
+	defer client.Close()
 
-	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
-	if err != nil {
-		return err
-	}
-
-	client := api.NewClient(apiCaller)
 	req := apiparams.ListRolesRequest{Limit: c.limit, Offset: c.offset}
 	roles, err := client.ListRoles(&req)
 	if err != nil {
@@ -370,4 +400,18 @@ func (c *listRolesCommand) Run(ctxt *cmd.Context) error {
 	}
 
 	return nil
+}
+
+func (c *listRolesCommand) newClient() (JIMMAPI, error) {
+	currentController, err := c.store.CurrentController()
+	if err != nil {
+		return nil, errors.E(err, "could not determine controller")
+	}
+
+	apiCaller, err := c.NewAPIRootWithDialOpts(c.store, currentController, "", c.dialOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	return api.NewClient(apiCaller), nil
 }
