@@ -592,13 +592,7 @@ func (c *listPermissionsCommand) Run(ctxt *cmd.Context) error {
 		ResolveUUIDs: c.resolveUUIDs,
 	}
 	
-	// fetchRelations requires concrete type, so we need to assert
-	apiClient, ok := client.(*api.Client)
-	if !ok {
-		return errors.E("unexpected client type")
-	}
-	
-	result, err := fetchRelations(apiClient, params)
+	result, err := fetchRelations(client, params)
 	if err != nil {
 		return errors.E(err)
 	}
@@ -627,7 +621,7 @@ func (c *listPermissionsCommand) newClient() (JIMMAPI, error) {
 	return api.NewClient(apiCaller), nil
 }
 
-func fetchRelations(client *api.Client, params apiparams.ListRelationshipTuplesRequest) (*apiparams.ListRelationshipTuplesResponse, error) {
+func fetchRelations(client JIMMAPI, params apiparams.ListRelationshipTuplesRequest) (*apiparams.ListRelationshipTuplesResponse, error) {
 	tuples := make([]apiparams.RelationshipTuple, 0)
 	for {
 		response, err := client.ListRelationshipTuples(&params)
