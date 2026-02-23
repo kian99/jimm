@@ -5,6 +5,7 @@ package auth_test
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -19,6 +21,7 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 	qt "github.com/frankban/quicktest"
 	"github.com/gorilla/sessions"
+	"golang.org/x/oauth2"
 
 	"github.com/canonical/jimm/v3/internal/auth"
 	"github.com/canonical/jimm/v3/internal/db"
@@ -27,6 +30,8 @@ import (
 	"github.com/canonical/jimm/v3/internal/testutils/jimmtest"
 	"github.com/canonical/jimm/v3/internal/testutils/testdb"
 )
+
+const testIdentityEmail = "jimm-test@canonical.com"
 
 func setupTestAuthSvc(ctx context.Context, c *qt.C, expiry time.Duration) (*auth.AuthenticationService, *db.Database, sessions.Store, func()) {
 	db := &db.Database{
@@ -59,6 +64,39 @@ func setupTestAuthSvc(ctx context.Context, c *qt.C, expiry time.Duration) (*auth
 		sessionStore.Close()
 	}
 	return authSvc, db, sessionStore, cleanup
+}
+
+func keycloakPasswordGrantToken(c *qt.C, username, password string) *oauth2.Token {
+	v := url.Values{}
+	v.Set("grant_type", "password")
+	v.Set("client_id", "jimm-device")
+	v.Set("client_secret", "SwjDofnbDzJDm9iyfUhEp67FfUFMY8L4")
+	v.Set("username", username)
+	v.Set("password", password)
+
+	resp, err := http.PostForm("http://localhost:8082/realms/jimm/protocol/openid-connect/token", v)
+	c.Assert(err, qt.IsNil)
+	defer resp.Body.Close()
+
+	b, err := io.ReadAll(resp.Body)
+	c.Assert(err, qt.IsNil)
+	c.Assert(resp.StatusCode, qt.Equals, http.StatusOK, qt.Commentf("body: %s", string(b)))
+
+	var tokenResp struct {
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+		TokenType    string `json:"token_type"`
+		ExpiresIn    int64  `json:"expires_in"`
+	}
+	err = json.Unmarshal(b, &tokenResp)
+	c.Assert(err, qt.IsNil)
+
+	return &oauth2.Token{
+		AccessToken:  tokenResp.AccessToken,
+		RefreshToken: tokenResp.RefreshToken,
+		TokenType:    tokenResp.TokenType,
+		Expiry:       time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second),
+	}
 }
 
 // This test requires the local docker compose to be running and keycloak
@@ -286,6 +324,44 @@ func assertSetCookiesIsCorrect(c *qt.C, parsedCookies []*http.Cookie) {
 	assertHasCookie("Max-Age", parsedCookies)
 }
 
+func parseCookieHeader(c *qt.C, headerValue string) []*http.Cookie {
+	c.Assert(headerValue, qt.Not(qt.Equals), "")
+
+	header := http.Header{}
+	header.Add("Cookie", headerValue)
+	request := http.Request{Header: header}
+	parsed := request.Cookies()
+	c.Assert(len(parsed), qt.Not(qt.Equals), 0)
+	return parsed
+}
+
+func seedIdentityTokens(c *qt.C, ctx context.Context, store *db.Database, email string, accessToken string, refreshToken string, expiry time.Time) {
+	u, err := dbmodel.NewIdentity(email)
+	c.Assert(err, qt.IsNil)
+	c.Assert(store.GetIdentity(ctx, u), qt.IsNil)
+
+	u.AccessToken = accessToken
+	u.RefreshToken = refreshToken
+	u.AccessTokenType = "Bearer"
+	u.AccessTokenExpiry = expiry
+
+	c.Assert(store.UpdateIdentity(ctx, u), qt.IsNil)
+}
+
+func newBrowserSessionCookie(c *qt.C, ctx context.Context, authSvc *auth.AuthenticationService, email string) *http.Cookie {
+	rec := httptest.NewRecorder()
+	req, err := http.NewRequest("GET", "", nil)
+	c.Assert(err, qt.IsNil)
+
+	err = authSvc.CreateBrowserSession(ctx, rec, req, email)
+	c.Assert(err, qt.IsNil)
+
+	setCookieHeader := rec.Header().Get("Set-Cookie")
+	parsedCookies := parseCookieHeader(c, setCookieHeader)
+	assertSetCookiesIsCorrect(c, parsedCookies)
+	return parsedCookies[0]
+}
+
 func TestCreateBrowserSession(t *testing.T) {
 	c := qt.New(t)
 	ctx := context.Background()
@@ -301,7 +377,7 @@ func TestCreateBrowserSession(t *testing.T) {
 	c.Assert(err, qt.IsNil)
 
 	cookies := rec.Header().Get("Set-Cookie")
-	parsedCookies := jimmtest.ParseCookies(cookies)
+	parsedCookies := parseCookieHeader(c, cookies)
 	assertSetCookiesIsCorrect(c, parsedCookies)
 
 	req.AddCookie(&http.Cookie{
@@ -318,24 +394,16 @@ func TestAuthenticateBrowserSessionAndLogout(t *testing.T) {
 	c := qt.New(t)
 	ctx := context.Background()
 
-	authSvc, db, sessionStore, cleanup := setupTestAuthSvc(ctx, c, time.Hour)
+	authSvc, db, _, cleanup := setupTestAuthSvc(ctx, c, time.Hour)
 	defer cleanup()
 
-	cookie, err := jimmtest.RunBrowserLogin(
-		db,
-		sessionStore,
-		jimmtest.HardcodedSafeUsername,
-		jimmtest.HardcodedSafePassword,
-	)
-	c.Assert(err, qt.IsNil)
+	seedIdentityTokens(c, ctx, db, testIdentityEmail, "valid-access-token", "valid-refresh-token", time.Now().Add(time.Hour))
+	cookie := newBrowserSessionCookie(c, ctx, authSvc, testIdentityEmail)
 
 	rec := httptest.NewRecorder()
 	req, err := http.NewRequest("GET", "", nil)
 	c.Assert(err, qt.IsNil)
-
-	cookies := jimmtest.ParseCookies(cookie)
-
-	req.AddCookie(cookies[0])
+	req.AddCookie(cookie)
 
 	ctx, err = authSvc.AuthenticateBrowserSession(ctx, rec, req)
 	c.Assert(err, qt.IsNil)
@@ -348,7 +416,7 @@ func TestAuthenticateBrowserSessionAndLogout(t *testing.T) {
 
 	// Assert Set-Cookie present
 	setCookieCookies := rec.Header().Get("Set-Cookie")
-	parsedCookies := jimmtest.ParseCookies(setCookieCookies)
+	parsedCookies := parseCookieHeader(c, setCookieCookies)
 	assertSetCookiesIsCorrect(c, parsedCookies)
 
 	// Test logout does indeed remove the cookie for us
@@ -365,16 +433,8 @@ func TestAuthenticateBrowserSessionRejectsNoneDecryptableOrDecodableCookies(t *t
 	c := qt.New(t)
 	ctx := context.Background()
 
-	authSvc, db, sessionStore, cleanup := setupTestAuthSvc(ctx, c, time.Hour)
+	authSvc, _, _, cleanup := setupTestAuthSvc(ctx, c, time.Hour)
 	defer cleanup()
-
-	_, err := jimmtest.RunBrowserLogin(
-		db,
-		sessionStore,
-		jimmtest.HardcodedSafeUsername,
-		jimmtest.HardcodedSafePassword,
-	)
-	c.Assert(err, qt.IsNil)
 
 	// Failure case 1: Bad base64 decoding
 	req, err := http.NewRequest("GET", "", nil)
@@ -408,28 +468,21 @@ func TestAuthenticateBrowserSessionHandlesExpiredAccessTokens(t *testing.T) {
 	c := qt.New(t)
 	ctx := context.Background()
 
-	authSvc, db, sessionStore, cleanup := setupTestAuthSvc(ctx, c, time.Hour)
+	authSvc, db, _, cleanup := setupTestAuthSvc(ctx, c, time.Hour)
 	defer cleanup()
 
-	cookie, err := jimmtest.RunBrowserLogin(
-		db,
-		sessionStore,
-		jimmtest.HardcodedSafeUsername,
-		jimmtest.HardcodedSafePassword,
-	)
-	c.Assert(err, qt.IsNil)
+	token := keycloakPasswordGrantToken(c, jimmtest.HardcodedSafeUsername, jimmtest.HardcodedSafePassword)
+	seedIdentityTokens(c, ctx, db, testIdentityEmail, token.AccessToken, token.RefreshToken, time.Now())
+	cookie := newBrowserSessionCookie(c, ctx, authSvc, testIdentityEmail)
 
 	rec := httptest.NewRecorder()
 	req, err := http.NewRequest("GET", "", nil)
 	c.Assert(err, qt.IsNil)
+	req.AddCookie(cookie)
 
-	cookies := jimmtest.ParseCookies(cookie)
-
-	req.AddCookie(cookies[0])
-
-	// User exists from run browser login, but we're gonna
-	// artificially expire their access token
-	u, err := dbmodel.NewIdentity("jimm-test@canonical.com")
+	// User exists from setup above, but we will
+	// artificially expire their access token.
+	u, err := dbmodel.NewIdentity(testIdentityEmail)
 	c.Assert(err, qt.IsNil)
 	err = db.GetIdentity(ctx, u)
 	c.Assert(err, qt.IsNil)
@@ -445,7 +498,7 @@ func TestAuthenticateBrowserSessionHandlesExpiredAccessTokens(t *testing.T) {
 
 	// Check identity added
 	identityId := auth.SessionIdentityFromContext(ctx)
-	c.Assert(identityId, qt.Equals, "jimm-test@canonical.com")
+	c.Assert(identityId, qt.Equals, testIdentityEmail)
 
 	// Get identity again with new access token expiry and access token
 	err = db.GetIdentity(ctx, u)
@@ -457,7 +510,7 @@ func TestAuthenticateBrowserSessionHandlesExpiredAccessTokens(t *testing.T) {
 	c.Assert(u.AccessToken, qt.Not(qt.Equals), previousToken)
 	// Assert Set-Cookie present
 	setCookieCookies := rec.Header().Get("Set-Cookie")
-	parsedCookies := jimmtest.ParseCookies(setCookieCookies)
+	parsedCookies := parseCookieHeader(c, setCookieCookies)
 	assertSetCookiesIsCorrect(c, parsedCookies)
 }
 
@@ -465,28 +518,20 @@ func TestAuthenticateBrowserSessionHandlesMissingOrExpiredRefreshTokens(t *testi
 	c := qt.New(t)
 	ctx := context.Background()
 
-	authSvc, db, sessionStore, cleanup := setupTestAuthSvc(ctx, c, time.Hour)
+	authSvc, db, _, cleanup := setupTestAuthSvc(ctx, c, time.Hour)
 	defer cleanup()
 
-	cookie, err := jimmtest.RunBrowserLogin(
-		db,
-		sessionStore,
-		jimmtest.HardcodedSafeUsername,
-		jimmtest.HardcodedSafePassword,
-	)
-	c.Assert(err, qt.IsNil)
+	seedIdentityTokens(c, ctx, db, testIdentityEmail, "expired-access-token", "", time.Now())
+	cookie := newBrowserSessionCookie(c, ctx, authSvc, testIdentityEmail)
 
 	rec := httptest.NewRecorder()
 	req, err := http.NewRequest("GET", "", nil)
 	c.Assert(err, qt.IsNil)
+	req.AddCookie(cookie)
 
-	cookies := jimmtest.ParseCookies(cookie)
-
-	req.AddCookie(cookies[0])
-
-	// User exists from run browser login, but we're gonna
-	// artificially expire their access token
-	u, err := dbmodel.NewIdentity("jimm-test@canonical.com")
+	// User exists from setup above, but we will
+	// artificially expire their access token.
+	u, err := dbmodel.NewIdentity(testIdentityEmail)
 	c.Assert(err, qt.IsNil)
 	err = db.GetIdentity(ctx, u)
 	c.Assert(err, qt.IsNil)
@@ -502,6 +547,7 @@ func TestAuthenticateBrowserSessionHandlesMissingOrExpiredRefreshTokens(t *testi
 	// AuthenticateBrowserSession should fail to refresh the users session.
 	_, err = authSvc.AuthenticateBrowserSession(ctx, rec, req)
 	c.Assert(err, qt.ErrorMatches, ".*failed to refresh token: oauth2: token expired and refresh token is not set")
+	c.Assert(strings.Contains(err.Error(), "failed to validate and update status token"), qt.IsTrue)
 }
 
 func TestNewMigrationToken(t *testing.T) {
