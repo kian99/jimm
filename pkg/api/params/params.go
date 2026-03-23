@@ -322,12 +322,8 @@ type ControllerProfileBootstrapOptions struct {
 	ModelDefault map[string]string `json:"model-default,omitempty" yaml:"model-default,omitempty"`
 	// StoragePool holds the options for an initial storage pool created in the controller model.
 	StoragePool *ControllerProfileStoragePool `json:"storage-pool,omitempty" yaml:"storage-pool,omitempty"`
-	// BootstrapConfig holds bootstrap configuration values.
-	BootstrapConfig map[string]string `json:"bootstrap-config,omitempty" yaml:"bootstrap-config,omitempty"`
-	// ControllerConfig holds controller configuration.
-	ControllerConfig map[string]string `json:"controller-config,omitempty" yaml:"controller-config,omitempty"`
-	// ControllerModelConfig holds model configuration values that apply only to the controller model.
-	ControllerModelConfig map[string]string `json:"controller-model-config,omitempty" yaml:"controller-model-config,omitempty"`
+	// Config holds the bootstrap, controller, and controller-model configuration values.
+	Config map[string]string `json:"config,omitempty" yaml:"config,omitempty"`
 }
 
 // ControllerProfileStoragePool stores the optional storage pool configuration for a profile.

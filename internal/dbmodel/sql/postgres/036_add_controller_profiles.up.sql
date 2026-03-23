@@ -26,7 +26,5 @@ CREATE TABLE IF NOT EXISTS controller_profiles (
     storage_pool_name VARCHAR(255),
     storage_pool_type VARCHAR(255),
     storage_pool_attributes JSONB,
-    bootstrap_config JSONB,
-    controller_config JSONB,
-    controller_model_config JSONB
+    config JSONB
 );

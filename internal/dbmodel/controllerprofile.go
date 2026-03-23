@@ -66,14 +66,12 @@ type ControllerProfileCloudRegion struct {
 // ControllerProfileBootstrapOptions stores the reusable bootstrap settings
 // supported by a controller profile.
 type ControllerProfileBootstrapOptions struct {
-	BootstrapBase         string                       `gorm:"column:bootstrap_base"`
-	BootstrapConstraints  StringMap                    `gorm:"column:bootstrap_constraints"`
-	ModelConstraints      StringMap                    `gorm:"column:model_constraints"`
-	ModelDefault          StringMap                    `gorm:"column:model_default"`
-	StoragePool           ControllerProfileStoragePool `gorm:"embedded"`
-	BootstrapConfig       StringMap                    `gorm:"column:bootstrap_config"`
-	ControllerConfig      StringMap                    `gorm:"column:controller_config"`
-	ControllerModelConfig StringMap                    `gorm:"column:controller_model_config"`
+	BootstrapBase        string                       `gorm:"column:bootstrap_base"`
+	BootstrapConstraints StringMap                    `gorm:"column:bootstrap_constraints"`
+	ModelConstraints     StringMap                    `gorm:"column:model_constraints"`
+	ModelDefault         StringMap                    `gorm:"column:model_default"`
+	StoragePool          ControllerProfileStoragePool `gorm:"embedded"`
+	Config               StringMap                    `gorm:"column:config"`
 }
 
 // ControllerProfileStoragePool stores the optional storage pool configuration

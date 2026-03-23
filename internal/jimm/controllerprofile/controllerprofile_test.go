@@ -41,13 +41,15 @@ func testControllerProfile(name string) dbmodel.ControllerProfile {
 			},
 		},
 		BootstrapOptions: dbmodel.ControllerProfileBootstrapOptions{
-			BootstrapBase:         "ubuntu@24.04",
-			BootstrapConstraints:  dbmodel.StringMap{"mem": "8G"},
-			ModelConstraints:      dbmodel.StringMap{"arch": "amd64"},
-			ModelDefault:          dbmodel.StringMap{"logging-config": "<root>=INFO"},
-			BootstrapConfig:       dbmodel.StringMap{"bootstrap-timeout": "20m"},
-			ControllerConfig:      dbmodel.StringMap{"audit-log-enabled": "true"},
-			ControllerModelConfig: dbmodel.StringMap{"logging-config": "<root>=INFO"},
+			BootstrapBase:        "ubuntu@24.04",
+			BootstrapConstraints: dbmodel.StringMap{"mem": "8G"},
+			ModelConstraints:     dbmodel.StringMap{"arch": "amd64"},
+			ModelDefault:         dbmodel.StringMap{"logging-config": "<root>=INFO"},
+			Config: dbmodel.StringMap{
+				"bootstrap-timeout": "20m",
+				"audit-log-enabled": "true",
+				"logging-config":    "<root>=INFO",
+			},
 			StoragePool: dbmodel.ControllerProfileStoragePool{
 				Name:       "controller-pool",
 				Type:       "ebs",

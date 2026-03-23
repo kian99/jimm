@@ -33,13 +33,15 @@ func testControllerProfileRequest(name string) apiparams.SaveControllerProfileRe
 				},
 			},
 			BootstrapOptions: apiparams.ControllerProfileBootstrapOptions{
-				BootstrapBase:         "ubuntu@24.04",
-				BootstrapConstraints:  map[string]string{"mem": "8G", "cores": "2"},
-				ModelConstraints:      map[string]string{"arch": "amd64"},
-				ModelDefault:          map[string]string{"logging-config": "<root>=INFO"},
-				BootstrapConfig:       map[string]string{"bootstrap-timeout": "20m"},
-				ControllerConfig:      map[string]string{"audit-log-enabled": "true"},
-				ControllerModelConfig: map[string]string{"logging-config": "<root>=INFO"},
+				BootstrapBase:        "ubuntu@24.04",
+				BootstrapConstraints: map[string]string{"mem": "8G", "cores": "2"},
+				ModelConstraints:     map[string]string{"arch": "amd64"},
+				ModelDefault:         map[string]string{"logging-config": "<root>=INFO"},
+				Config: map[string]string{
+					"bootstrap-timeout": "20m",
+					"audit-log-enabled": "true",
+					"logging-config":    "<root>=INFO",
+				},
 				StoragePool: &apiparams.ControllerProfileStoragePool{
 					Name:       "controller-pool",
 					Type:       "ebs",

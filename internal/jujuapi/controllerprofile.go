@@ -136,14 +136,12 @@ func controllerProfileFromParams(profile apiparams.ControllerProfile) dbmodel.Co
 			},
 		},
 		BootstrapOptions: dbmodel.ControllerProfileBootstrapOptions{
-			BootstrapBase:         profile.BootstrapOptions.BootstrapBase,
-			BootstrapConstraints:  dbmodel.StringMap(profile.BootstrapOptions.BootstrapConstraints),
-			ModelConstraints:      dbmodel.StringMap(profile.BootstrapOptions.ModelConstraints),
-			ModelDefault:          dbmodel.StringMap(profile.BootstrapOptions.ModelDefault),
-			StoragePool:           storagePoolFromParams(profile.BootstrapOptions.StoragePool),
-			BootstrapConfig:       dbmodel.StringMap(profile.BootstrapOptions.BootstrapConfig),
-			ControllerConfig:      dbmodel.StringMap(profile.BootstrapOptions.ControllerConfig),
-			ControllerModelConfig: dbmodel.StringMap(profile.BootstrapOptions.ControllerModelConfig),
+			BootstrapBase:        profile.BootstrapOptions.BootstrapBase,
+			BootstrapConstraints: dbmodel.StringMap(profile.BootstrapOptions.BootstrapConstraints),
+			ModelConstraints:     dbmodel.StringMap(profile.BootstrapOptions.ModelConstraints),
+			ModelDefault:         dbmodel.StringMap(profile.BootstrapOptions.ModelDefault),
+			StoragePool:          storagePoolFromParams(profile.BootstrapOptions.StoragePool),
+			Config:               dbmodel.StringMap(profile.BootstrapOptions.Config),
 		},
 	}
 }
@@ -183,14 +181,12 @@ func controllerProfileToParams(profile dbmodel.ControllerProfile) apiparams.Cont
 			},
 		},
 		BootstrapOptions: apiparams.ControllerProfileBootstrapOptions{
-			BootstrapBase:         profile.BootstrapOptions.BootstrapBase,
-			BootstrapConstraints:  map[string]string(profile.BootstrapOptions.BootstrapConstraints),
-			ModelConstraints:      map[string]string(profile.BootstrapOptions.ModelConstraints),
-			ModelDefault:          map[string]string(profile.BootstrapOptions.ModelDefault),
-			StoragePool:           storagePoolToParams(profile.BootstrapOptions.StoragePool),
-			BootstrapConfig:       map[string]string(profile.BootstrapOptions.BootstrapConfig),
-			ControllerConfig:      map[string]string(profile.BootstrapOptions.ControllerConfig),
-			ControllerModelConfig: map[string]string(profile.BootstrapOptions.ControllerModelConfig),
+			BootstrapBase:        profile.BootstrapOptions.BootstrapBase,
+			BootstrapConstraints: map[string]string(profile.BootstrapOptions.BootstrapConstraints),
+			ModelConstraints:     map[string]string(profile.BootstrapOptions.ModelConstraints),
+			ModelDefault:         map[string]string(profile.BootstrapOptions.ModelDefault),
+			StoragePool:          storagePoolToParams(profile.BootstrapOptions.StoragePool),
+			Config:               map[string]string(profile.BootstrapOptions.Config),
 		},
 	}
 }

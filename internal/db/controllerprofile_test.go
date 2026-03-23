@@ -42,9 +42,11 @@ func testControllerProfile() dbmodel.ControllerProfile {
 				Type:       "ebs",
 				Attributes: dbmodel.StringMap{"volume-type": "gp3"},
 			},
-			BootstrapConfig:       dbmodel.StringMap{"bootstrap-timeout": "20m"},
-			ControllerConfig:      dbmodel.StringMap{"audit-log-enabled": "true"},
-			ControllerModelConfig: dbmodel.StringMap{"logging-config": "<root>=INFO"},
+			Config: dbmodel.StringMap{
+				"bootstrap-timeout": "20m",
+				"audit-log-enabled": "true",
+				"logging-config":    "<root>=INFO",
+			},
 		},
 	}
 }
@@ -68,7 +70,7 @@ func (s *dbSuite) TestControllerProfileCRUD(c *qt.C) {
 
 	profile.Description = "Updated description"
 	profile.Cloud.Endpoint = "https://private-cloud-2.internal"
-	profile.BootstrapOptions.ControllerConfig = dbmodel.StringMap{"audit-log-enabled": "false", "audit-log-max-size": "100MB"}
+	profile.BootstrapOptions.Config = dbmodel.StringMap{"audit-log-enabled": "false", "audit-log-max-size": "100MB"}
 	c.Assert(s.Database.CreateOrReplaceControllerProfile(ctx, &profile), qt.IsNil)
 	c.Check(profile.Version, qt.Equals, uint(2))
 
