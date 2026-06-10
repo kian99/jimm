@@ -4,12 +4,15 @@ package jimmhttp
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
+	"net/url"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/go-chi/chi/v5"
 	"github.com/juju/zaputil/zapctx"
+	"github.com/rs/cors"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 
@@ -22,19 +25,23 @@ import (
 // AuthResourceBasePath forms the base path and the remainder are
 // appended onto the base in practice.
 const (
-	AuthResourceBasePath = "/auth"
-	CallbackEndpoint     = "/callback"
-	WhoAmIEndpoint       = "/whoami"
-	LogOutEndpoint       = "/logout"
-	LoginEndpoint        = "/login"
+	AuthResourceBasePath    = "/auth"
+	CallbackEndpoint        = "/callback"
+	WhoAmIEndpoint          = "/whoami"
+	LogOutEndpoint          = "/logout"
+	LoginEndpoint           = "/login"
+	redirectURIQueryParam   = "redirect_uri"
+	finalRedirectCookieName = "jimm-final-redirect-uri"
 )
 
 // OAuthHandler handles the oauth2.0 browser flow for JIMM.
 // Implements jimmhttp.JIMMHttpHandler.
 type OAuthHandler struct {
-	Router                    *chi.Mux
-	authenticator             BrowserOAuthAuthenticator
-	dashboardFinalRedirectURL string
+	Router                       *chi.Mux
+	authenticator                BrowserOAuthAuthenticator
+	dashboardFinalRedirectURL    string
+	allowedFinalRedirectOrigins  []string
+	finalRedirectOriginValidator *cors.Cors
 }
 
 // OAuthHandlerParams holds the parameters to configure the OAuthHandler.
@@ -45,6 +52,10 @@ type OAuthHandlerParams struct {
 	// DashboardFinalRedirectURL is the final redirection URL to send users to
 	// upon completing the authorisation code flow.
 	DashboardFinalRedirectURL string
+
+	// AllowedFinalRedirectOrigins lists the allowed origins for per-login
+	// redirect overrides supplied via the redirect_uri query parameter.
+	AllowedFinalRedirectOrigins []string
 }
 
 // BrowserOAuthAuthenticator handles authorisation code authentication within JIMM
@@ -74,10 +85,16 @@ func NewOAuthHandler(p OAuthHandlerParams) (*OAuthHandler, error) {
 	if p.DashboardFinalRedirectURL == "" {
 		return nil, errors.New("final redirect url not specified")
 	}
+	allowedFinalRedirectOrigins := append([]string(nil), p.AllowedFinalRedirectOrigins...)
+	if defaultOrigin, err := finalRedirectOrigin(p.DashboardFinalRedirectURL); err == nil {
+		allowedFinalRedirectOrigins = appendMissingString(allowedFinalRedirectOrigins, defaultOrigin)
+	}
 	return &OAuthHandler{
-		Router:                    chi.NewRouter(),
-		authenticator:             p.Authenticator,
-		dashboardFinalRedirectURL: p.DashboardFinalRedirectURL,
+		Router:                       chi.NewRouter(),
+		authenticator:                p.Authenticator,
+		dashboardFinalRedirectURL:    p.DashboardFinalRedirectURL,
+		allowedFinalRedirectOrigins:  allowedFinalRedirectOrigins,
+		finalRedirectOriginValidator: cors.New(cors.Options{AllowedOrigins: allowedFinalRedirectOrigins}),
 	}, nil
 }
 
@@ -95,14 +112,102 @@ func (oah *OAuthHandler) Routes() chi.Router {
 func (oah *OAuthHandler) SetupMiddleware() {
 }
 
+func (oah *OAuthHandler) persistRequestedFinalRedirectURL(w http.ResponseWriter, redirectURL string) {
+	redirectCookie := &http.Cookie{
+		Name:     finalRedirectCookieName,
+		MaxAge:   900,                                     // 15 min.
+		Path:     AuthResourceBasePath + CallbackEndpoint, // Only send the cookie back on /auth paths.
+		HttpOnly: true,                                    // Restrict access from JS.
+		SameSite: http.SameSiteLaxMode,                    // Allow the cookie to be sent on a redirect from the IdP to JIMM.
+	}
+	if redirectURL == "" {
+		redirectCookie.MaxAge = -1
+	} else {
+		redirectCookie.Value = base64.RawURLEncoding.EncodeToString([]byte(redirectURL))
+	}
+	http.SetCookie(w, redirectCookie)
+}
+
+func (oah *OAuthHandler) requestedFinalRedirectURL(r *http.Request) (string, error) {
+	rawRedirectURL := r.URL.Query().Get(redirectURIQueryParam)
+	if rawRedirectURL == "" {
+		return "", nil
+	}
+	return oah.validateFinalRedirectURL(rawRedirectURL)
+}
+
+func (oah *OAuthHandler) callbackFinalRedirectURL(r *http.Request) (string, error) {
+	redirectCookie, err := r.Cookie(finalRedirectCookieName)
+	if err != nil {
+		if err == http.ErrNoCookie {
+			return oah.dashboardFinalRedirectURL, nil
+		}
+		return "", err
+	}
+	redirectURL, err := base64.RawURLEncoding.DecodeString(redirectCookie.Value)
+	if err != nil {
+		return "", errors.New("invalid redirect uri cookie")
+	}
+	return oah.validateFinalRedirectURL(string(redirectURL))
+}
+
+func (oah *OAuthHandler) validateFinalRedirectURL(rawRedirectURL string) (string, error) {
+	parsedRedirectURL, err := url.Parse(rawRedirectURL)
+	if err != nil {
+		return "", errors.New("invalid redirect uri")
+	}
+	if parsedRedirectURL.Scheme != "http" && parsedRedirectURL.Scheme != "https" {
+		return "", errors.New("redirect uri must use http or https")
+	}
+	if parsedRedirectURL.Host == "" {
+		return "", errors.New("redirect uri must include a host")
+	}
+	if len(oah.allowedFinalRedirectOrigins) == 0 {
+		return "", errors.New("redirect uri origin is not allowed")
+	}
+	origin := parsedRedirectURL.Scheme + "://" + parsedRedirectURL.Host
+	request := &http.Request{Header: make(http.Header)}
+	request.Header.Set("Origin", origin)
+	if !oah.finalRedirectOriginValidator.OriginAllowed(request) {
+		return "", errors.New("redirect uri origin is not allowed")
+	}
+	return parsedRedirectURL.String(), nil
+}
+
+func finalRedirectOrigin(rawRedirectURL string) (string, error) {
+	parsedRedirectURL, err := url.Parse(rawRedirectURL)
+	if err != nil {
+		return "", err
+	}
+	if parsedRedirectURL.Scheme == "" || parsedRedirectURL.Host == "" {
+		return "", errors.New("redirect uri must include a scheme and host")
+	}
+	return parsedRedirectURL.Scheme + "://" + parsedRedirectURL.Host, nil
+}
+
+func appendMissingString(values []string, value string) []string {
+	for _, existingValue := range values {
+		if existingValue == value {
+			return values
+		}
+	}
+	return append(values, value)
+}
+
 // Login handles /auth/login.
 func (oah *OAuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	finalRedirectURL, err := oah.requestedFinalRedirectURL(r)
+	if err != nil {
+		writeError(ctx, w, http.StatusBadRequest, err, "invalid redirect uri")
+		return
+	}
 	redirectURL, state, err := oah.authenticator.AuthCodeURL()
 	if err != nil {
 		writeError(ctx, w, http.StatusInternalServerError, err, "failed to generate auth redirect URL")
 		return
 	}
+	oah.persistRequestedFinalRedirectURL(w, finalRedirectURL)
 	http.SetCookie(w, &http.Cookie{
 		Name:     auth.StateKey,
 		Value:    state,
@@ -170,9 +275,16 @@ func (oah *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		email,
 	); err != nil {
 		writeError(ctx, w, http.StatusInternalServerError, err, "failed to setup session")
+		return
 	}
 
-	http.Redirect(w, r, oah.dashboardFinalRedirectURL, http.StatusPermanentRedirect)
+	finalRedirectURL, err := oah.callbackFinalRedirectURL(r)
+	if err != nil {
+		writeError(ctx, w, http.StatusBadRequest, err, "invalid redirect uri")
+		return
+	}
+	oah.persistRequestedFinalRedirectURL(w, "") // Clear the cookie
+	http.Redirect(w, r, finalRedirectURL, http.StatusPermanentRedirect)
 }
 
 // Logout handles /auth/logout.

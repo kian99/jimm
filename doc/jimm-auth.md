@@ -10,6 +10,8 @@ To perform a login against JIMM using the authorisation code flow from a browser
 ### HTTP /auth/login GET
 This will perform a a temporary redirect (307) to the /auth endpoint of JAAS' OAuth capable IdP server. The user will then be expected to login using any of the configured methods on the OAuth server, such as social sign in (e.g. Sign in with Google/Github/etc) or self service.
 
+`/auth/login` also accepts an optional `redirect_uri` query parameter. When supplied, JIMM will use that URL as the post-login browser destination instead of the configured default dashboard URL. The redirect URI must be an absolute `http` or `https` URL and its origin must match one of the configured allowed browser origins (or the configured default dashboard origin).
+
 ### HTTP /auth/callback REDIRECT
 Upon a successful login, the OAuth server will redirect back to JIMM's callback endpoint.
 
@@ -17,7 +19,7 @@ This endpoint will do the following:
 1. Authenticate the user with the OAuth server
 2. Create a session for the user within JIMM's database
 3. Create and return an encrypted cookie containing the session information
-4. Redirect the user back to a configurable final redirect URL (likely the Juju dashboard)
+4. Redirect the user back to a configurable final redirect URL (likely the Juju dashboard), or to the `redirect_uri` requested on `/auth/login` when that origin is allowed
 5. Attempt to extract the email claim from the id_token
 6. Create a session within JIMM's internal database and then attach an encrypted cookie containing the session identity ID to the response for the final redirect called "jimm-browser-session", finally, jimm redirect back the the configured final redirect URL (which is likely to be the Juju dashboard)
 

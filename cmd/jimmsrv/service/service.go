@@ -536,8 +536,9 @@ func NewServiceDependencies(ctx context.Context, p Params) (*ServiceDependencies
 	if p.DashboardFinalRedirectURL != "" {
 		var err error
 		deps.OAuthHandler, err = jimmhttp.NewOAuthHandler(jimmhttp.OAuthHandlerParams{
-			Authenticator:             authSvc,
-			DashboardFinalRedirectURL: p.DashboardFinalRedirectURL,
+			Authenticator:               authSvc,
+			DashboardFinalRedirectURL:   p.DashboardFinalRedirectURL,
+			AllowedFinalRedirectOrigins: p.CorsAllowedOrigins,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to setup authentication handler: %w", err)

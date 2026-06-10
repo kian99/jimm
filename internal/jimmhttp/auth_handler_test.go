@@ -13,8 +13,11 @@ import (
 	"time"
 
 	"github.com/antonlindstrom/pgstore"
+	"github.com/coreos/go-oidc/v3/oidc"
 	qt "github.com/frankban/quicktest"
+	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/sessions"
+	"golang.org/x/oauth2"
 
 	"github.com/canonical/jimm/v3/internal/auth"
 	"github.com/canonical/jimm/v3/internal/db"
@@ -48,6 +51,65 @@ func createClientWithStateCookie(c *qt.C, s *httptest.Server) *http.Client {
 	stateCookie := http.Cookie{Name: auth.StateKey, Value: "123"}
 	jar.SetCookies(jimmURL, []*http.Cookie{&stateCookie})
 	return &http.Client{Jar: jar}
+}
+
+type stubBrowserOAuthAuthenticator struct {
+	authCodeURL string
+	state       string
+}
+
+func (s stubBrowserOAuthAuthenticator) AuthCodeURL() (string, string, error) {
+	return s.authCodeURL, s.state, nil
+}
+
+func (s stubBrowserOAuthAuthenticator) Exchange(context.Context, string) (*oauth2.Token, error) {
+	return &oauth2.Token{AccessToken: "access-token"}, nil
+}
+
+func (s stubBrowserOAuthAuthenticator) ExtractAndVerifyIDToken(context.Context, *oauth2.Token) (*oidc.IDToken, error) {
+	return nil, nil
+}
+
+func (s stubBrowserOAuthAuthenticator) Email(*oidc.IDToken) (string, error) {
+	return "jimm-test@canonical.com", nil
+}
+
+func (s stubBrowserOAuthAuthenticator) UpdateIdentity(context.Context, string, *oauth2.Token) error {
+	return nil
+}
+
+func (s stubBrowserOAuthAuthenticator) CreateBrowserSession(context.Context, http.ResponseWriter, *http.Request, string) error {
+	return nil
+}
+
+func (s stubBrowserOAuthAuthenticator) Logout(context.Context, http.ResponseWriter, *http.Request) error {
+	return nil
+}
+
+func (s stubBrowserOAuthAuthenticator) AuthenticateBrowserSession(ctx context.Context, w http.ResponseWriter, req *http.Request) (context.Context, error) {
+	return ctx, nil
+}
+
+func (s stubBrowserOAuthAuthenticator) Whoami(context.Context) (*params.WhoamiResponse, error) {
+	return &params.WhoamiResponse{
+		DisplayName: "jimm-test",
+		Email:       "jimm-test@canonical.com",
+	}, nil
+}
+
+func newStubOAuthServer(c *qt.C, defaultRedirectURL string, allowedRedirectOrigins []string) *httptest.Server {
+	handler, err := jimmhttp.NewOAuthHandler(jimmhttp.OAuthHandlerParams{
+		Authenticator: stubBrowserOAuthAuthenticator{
+			authCodeURL: "https://idp.example.com/auth",
+			state:       "state-123",
+		},
+		DashboardFinalRedirectURL:   defaultRedirectURL,
+		AllowedFinalRedirectOrigins: allowedRedirectOrigins,
+	})
+	c.Assert(err, qt.IsNil)
+	mux := chi.NewMux()
+	mux.Mount(jimmhttp.AuthResourceBasePath, handler.Routes())
+	return httptest.NewServer(mux)
 }
 
 // TestBrowserLoginAndLogout goes through the flow of a browser logging in, simulating
@@ -202,4 +264,65 @@ func TestCallbackFailsExchange(t *testing.T) {
 	b, err := io.ReadAll(res.Body)
 	c.Assert(err, qt.IsNil)
 	c.Assert(string(b), qt.Equals, http.StatusText(http.StatusForbidden)+` - authorisation code exchange failed: oauth2: "invalid_grant" "Code not valid"`+"\n")
+}
+
+func TestLoginRejectsDisallowedRedirectURI(t *testing.T) {
+	c := qt.New(t)
+
+	defaultRedirect := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	defer defaultRedirect.Close()
+
+	authServer := newStubOAuthServer(c, defaultRedirect.URL, []string{defaultRedirect.URL})
+	defer authServer.Close()
+
+	response, err := http.Get(authServer.URL + jimmhttp.AuthResourceBasePath + jimmhttp.LoginEndpoint + "?redirect_uri=" + url.QueryEscape("https://pr-123.demo.example.com/models"))
+	c.Assert(err, qt.IsNil)
+	defer response.Body.Close()
+	c.Assert(response.StatusCode, qt.Equals, http.StatusBadRequest)
+	body, err := io.ReadAll(response.Body)
+	c.Assert(err, qt.IsNil)
+	c.Assert(string(body), qt.Equals, http.StatusText(http.StatusBadRequest)+" - redirect uri origin is not allowed\n")
+}
+
+func TestCallbackUsesRequestedRedirectURI(t *testing.T) {
+	c := qt.New(t)
+
+	defaultRedirect := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("default redirect"))
+	}))
+	defer defaultRedirect.Close()
+
+	requestedRedirect := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("requested redirect"))
+	}))
+	defer requestedRedirect.Close()
+
+	authServer := newStubOAuthServer(c, defaultRedirect.URL, []string{requestedRedirect.URL})
+	defer authServer.Close()
+
+	jar, err := cookiejar.New(nil)
+	c.Assert(err, qt.IsNil)
+	client := &http.Client{
+		Jar: jar,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	loginURL := authServer.URL + jimmhttp.AuthResourceBasePath + jimmhttp.LoginEndpoint + "?redirect_uri=" + url.QueryEscape(requestedRedirect.URL+"/models")
+	response, err := client.Get(loginURL)
+	c.Assert(err, qt.IsNil)
+	defer response.Body.Close()
+	c.Assert(response.StatusCode, qt.Equals, http.StatusTemporaryRedirect)
+	c.Assert(response.Header.Get("Location"), qt.Equals, "https://idp.example.com/auth")
+
+	client.CheckRedirect = nil
+	callbackURL := authServer.URL + jimmhttp.AuthResourceBasePath + jimmhttp.CallbackEndpoint + "?state=state-123&code=ok"
+	response, err = client.Get(callbackURL)
+	c.Assert(err, qt.IsNil)
+	defer response.Body.Close()
+	c.Assert(response.StatusCode, qt.Equals, http.StatusOK)
+	body, err := io.ReadAll(response.Body)
+	c.Assert(err, qt.IsNil)
+	c.Assert(string(body), qt.Equals, "requested redirect")
 }
