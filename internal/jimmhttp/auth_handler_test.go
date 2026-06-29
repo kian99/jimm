@@ -15,6 +15,7 @@ import (
 	"github.com/antonlindstrom/pgstore"
 	qt "github.com/frankban/quicktest"
 	"github.com/gorilla/sessions"
+	"golang.org/x/oauth2"
 
 	"github.com/canonical/jimm/v3/internal/auth"
 	"github.com/canonical/jimm/v3/internal/db"
@@ -23,6 +24,40 @@ import (
 	"github.com/canonical/jimm/v3/internal/testutils/testdb"
 	"github.com/canonical/jimm/v3/pkg/api/params"
 )
+
+type loginTestAuthenticator struct{}
+
+func (loginTestAuthenticator) AuthCodeURL() (string, string, error) {
+	return "https://example.com/oauth?redirect_uri=" + url.QueryEscape("https://example.com/prefix"+jimmhttp.AuthResourceBasePath+jimmhttp.CallbackEndpoint), "test-state", nil
+}
+
+func (loginTestAuthenticator) Exchange(context.Context, string) (*oauth2.Token, error) {
+	panic("unexpected call")
+}
+
+func (loginTestAuthenticator) VerifyAndExtractIdentityClaims(context.Context, *oauth2.Token) (auth.IdentityClaims, error) {
+	panic("unexpected call")
+}
+
+func (loginTestAuthenticator) UpdateIdentity(context.Context, string, *oauth2.Token) error {
+	panic("unexpected call")
+}
+
+func (loginTestAuthenticator) CreateBrowserSessionWithGroups(context.Context, http.ResponseWriter, *http.Request, string, []string) error {
+	panic("unexpected call")
+}
+
+func (loginTestAuthenticator) Logout(context.Context, http.ResponseWriter, *http.Request) error {
+	panic("unexpected call")
+}
+
+func (loginTestAuthenticator) AuthenticateBrowserSession(context.Context, http.ResponseWriter, *http.Request) (context.Context, error) {
+	panic("unexpected call")
+}
+
+func (loginTestAuthenticator) Whoami(context.Context) (*params.WhoamiResponse, error) {
+	panic("unexpected call")
+}
 
 func setupDbAndSessionStore(c *qt.C) (*db.Database, sessions.Store) {
 	// Setup db ahead of time so we have access to session store
@@ -120,6 +155,40 @@ func TestBrowserLoginAndLogout(t *testing.T) {
 	c.Assert(err, qt.IsNil)
 	defer res.Body.Close()
 	c.Assert(res.StatusCode, qt.Equals, http.StatusForbidden)
+}
+
+func TestLoginSetsStateCookiePathUsingRequestPrefix(t *testing.T) {
+	c := qt.New(t)
+
+	h, err := jimmhttp.NewOAuthHandler(jimmhttp.OAuthHandlerParams{
+		Authenticator:             loginTestAuthenticator{},
+		DashboardFinalRedirectURL: "https://dashboard.example.com",
+	})
+	c.Assert(err, qt.IsNil)
+
+	mux := http.NewServeMux()
+	mux.Handle("/prefix"+jimmhttp.AuthResourceBasePath+"/", http.StripPrefix("/prefix"+jimmhttp.AuthResourceBasePath, h.Routes()))
+
+	req := httptest.NewRequest(http.MethodGet, "https://example.com/prefix"+jimmhttp.AuthResourceBasePath+jimmhttp.LoginEndpoint, nil)
+	w := httptest.NewRecorder()
+
+	mux.ServeHTTP(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+	c.Assert(res.StatusCode, qt.Equals, http.StatusTemporaryRedirect)
+	c.Assert(res.Header.Get("Location"), qt.Equals, "https://example.com/oauth?redirect_uri="+url.QueryEscape("https://example.com/prefix"+jimmhttp.AuthResourceBasePath+jimmhttp.CallbackEndpoint))
+
+	var stateCookie *http.Cookie
+	for _, cookie := range res.Cookies() {
+		if cookie.Name == auth.StateKey {
+			stateCookie = cookie
+			break
+		}
+	}
+	c.Assert(stateCookie, qt.IsNotNil)
+	c.Assert(stateCookie.Value, qt.Equals, "test-state")
+	c.Assert(stateCookie.Path, qt.Equals, "/prefix"+jimmhttp.AuthResourceBasePath+jimmhttp.CallbackEndpoint)
 }
 
 func TestCallbackFailsNoState(t *testing.T) {

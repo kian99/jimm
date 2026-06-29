@@ -5,7 +5,10 @@ package jimmhttp
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"net/url"
+	"path"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/juju/zaputil/zapctx"
@@ -102,15 +105,39 @@ func (oah *OAuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		writeError(ctx, w, http.StatusInternalServerError, err, "failed to generate auth redirect URL")
 		return
 	}
+	callbackCookiePath, err := callbackCookiePathFromAuthRedirectURL(redirectURL)
+	if err != nil {
+		writeError(ctx, w, http.StatusInternalServerError, err, "failed to determine auth callback cookie path")
+		return
+	}
 	http.SetCookie(w, &http.Cookie{
 		Name:     auth.StateKey,
 		Value:    state,
-		MaxAge:   900,                                     // 15 min.
-		Path:     AuthResourceBasePath + CallbackEndpoint, // Only send the cookie back on /auth paths.
-		HttpOnly: true,                                    // Restrict access from JS.
-		SameSite: http.SameSiteLaxMode,                    // Allow the cookie to be sent on a redirect from the IdP to JIMM.
+		MaxAge:   900,                  // 15 min.
+		Path:     callbackCookiePath,   // Only send the cookie back on the callback path, including any mount prefix.
+		HttpOnly: true,                 // Restrict access from JS.
+		SameSite: http.SameSiteLaxMode, // Allow the cookie to be sent on a redirect from the IdP to JIMM.
 	})
 	http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
+}
+
+func callbackCookiePathFromAuthRedirectURL(authRedirectURL string) (string, error) {
+	authURL, err := url.Parse(authRedirectURL)
+	if err != nil {
+		return "", fmt.Errorf("invalid auth redirect URL: %w", err)
+	}
+	redirectURI := authURL.Query().Get("redirect_uri")
+	if redirectURI == "" {
+		return "", errors.New("auth redirect URL missing redirect_uri")
+	}
+	callbackURL, err := url.Parse(redirectURI)
+	if err != nil {
+		return "", fmt.Errorf("invalid redirect_uri: %w", err)
+	}
+	if callbackURL.Path == "" {
+		return "", errors.New("redirect_uri missing callback path")
+	}
+	return path.Clean(callbackURL.Path), nil
 }
 
 // Callback handles /auth/callback.
